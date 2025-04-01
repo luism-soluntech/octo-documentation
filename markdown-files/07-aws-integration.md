@@ -10,13 +10,9 @@ The Octo system integrates with various AWS services to facilitate secure storag
 
 Amazon S3 (Simple Storage Service) is used as the primary storage solution for files processed by the Octo system. Files downloaded from various providers are processed and then uploaded to S3 for long-term storage and further analysis.
 
-```
-┌────────────────┐      ┌────────────────┐      ┌────────────────┐
-│                │      │                │      │                │
-│  Provider      │ ───► │  Octo System   │ ───► │  AWS S3        │
-│  Files         │      │  Processing    │      │  Storage       │
-│                │      │                │      │                │
-└────────────────┘      └────────────────┘      └────────────────┘
+```mermaid
+flowchart LR
+    provider["Provider\nFiles"] --> system["Octo System\nProcessing"] --> storage["AWS S3\nStorage"]
 ```
 
 ### S3 Client Configuration
@@ -109,28 +105,12 @@ This prevents duplicate processing of files that have already been uploaded to S
 
 The Octo system is designed to be deployed on an AWS EC2 instance, as outlined in the SETUP.MD file:
 
-```
-┌────────────────────────────────────────────────────┐
-│                     EC2 Instance                    │
-│                                                     │
-│   ┌────────────────┐         ┌────────────────┐    │
-│   │                │         │                │    │
-│   │  Docker        │         │  SSH/SFTP      │    │
-│   │  Container     │◄────────┤  Access        │    │
-│   │  (Octo System) │         │                │    │
-│   │                │         │                │    │
-│   └────────────────┘         └────────────────┘    │
-│            │                                        │
-│            │                                        │
-│            ▼                                        │
-│   ┌────────────────┐                               │
-│   │                │                               │
-│   │  AWS SDK       │                               │
-│   │  (S3 Access)   │                               │
-│   │                │                               │
-│   └────────────────┘                               │
-│                                                     │
-└────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph EC2["EC2 Instance"]
+        Docker["Docker Container\n(Octo System)"] <--> SSH["SSH/SFTP\nAccess"]
+        Docker --> SDK["AWS SDK\n(S3 Access)"]
+    end
 ```
 
 ### Instance Setup
