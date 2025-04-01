@@ -14,7 +14,6 @@ The Factory Pattern is used to create provider-specific handlers through the `Pr
 class ProviderFactory():
   def __init__(self, provider):
     self.provider = provider
-
   def get_provider(self, data) -> BaseProvider | None:
     if self.provider == "affirm":
       from src.core.providers.affirm import AffirmProvider
@@ -41,276 +40,305 @@ provider = providerObject.get_provider(data)
 - **Extensibility**: New providers can be added by extending the factory without modifying client code
 - **Conditional Loading**: Only imports the necessary provider modules when needed
 
+### Diagram
+
+```mermaid
+classDiagram
+    class ProviderFactory {
+        +String provider
+        +ProviderFactory(provider)
+        +get_provider(data) BaseProvider
+    }
+
+    class BaseProvider {
+        <<abstract>>
+        +process_files()
+        +validate_data()
+    }
+
+    class AffirmProvider {
+        +process_files()
+        +validate_data()
+    }
+
+    class BloombergProvider {
+        +process_files()
+        +validate_data()
+    }
+
+    ProviderFactory ..> BaseProvider
+    BaseProvider <|-- AffirmProvider
+    BaseProvider <|-- BloombergProvider
+```
+
 ## Strategy Pattern
 
 ### Implementation
 
-The Strategy Pattern is implemented through the `BaseProvider` abstract class and its concrete implementations:
+The Strategy Pattern is used for file processing strategies:
 
 ```python
-class BaseProvider:
-  def __init__(self, data: dict[str, str | None], provider_name: str):
-    self.data = data
-    self.provider_name = provider_name
-    self.sftp_client = None
-    self.ssh_client = None
+class FileProcessor:
+    def __init__(self, strategy: FileProcessingStrategy):
+        self.strategy = strategy
 
-  def get_bucket_name():
-    pass
+    def process(self, file_path):
+        return self.strategy.process(file_path)
 
-  def connect_ssh():
-    pass
+class FileProcessingStrategy(ABC):
+    @abstractmethod
+    def process(self, file_path):
+        pass
 
-  # other abstract methods...
-```
+class CSVProcessingStrategy(FileProcessingStrategy):
+    def process(self, file_path):
+        # CSV specific processing
+        pass
 
-Concrete implementations for different providers:
-
-```python
-class AffirmProvider(BaseProvider):
-  def __init__(self, data):
-    super().__init__(data, 'affirm')
-
-  def get_bucket_name(self):
-    return self.data.get('S3_BUCKET_AFFIRM')
-
-  # other overridden methods...
+class XMLProcessingStrategy(FileProcessingStrategy):
+    def process(self, file_path):
+        # XML specific processing
+        pass
 ```
 
 ### Usage
 
-The client code (main logic) interacts with the abstract `BaseProvider` interface, unaware of the specific provider implementation:
-
 ```python
-await provider.get_save_files(bucket_name)
-ssh_client = await provider.connect_ssh()
-pending_files = await provider.get_pending_files(saved_files_arr)
-# ...
+# For CSV files
+processor = FileProcessor(CSVProcessingStrategy())
+processor.process("data.csv")
+
+# For XML files
+processor = FileProcessor(XMLProcessingStrategy())
+processor.process("data.xml")
 ```
 
 ### Benefits
 
-- **Interchangeability**: Different provider implementations can be used interchangeably
-- **Separation of Concerns**: Each provider encapsulates its specific behavior
-- **Extensibility**: New providers can be added without changing the client code
+- **Decoupling**: Separates the file processing algorithm from the client code
+- **Flexibility**: Allows switching strategies at runtime
+- **Organized Code**: Each strategy is encapsulated in its own class
 
-## Template Method Pattern
+### Diagram
+
+```mermaid
+classDiagram
+    class FileProcessor {
+        +FileProcessingStrategy strategy
+        +FileProcessor(strategy)
+        +process(file_path)
+    }
+
+    class FileProcessingStrategy {
+        <<interface>>
+        +process(file_path)
+    }
+
+    class CSVProcessingStrategy {
+        +process(file_path)
+    }
+
+    class XMLProcessingStrategy {
+        +process(file_path)
+    }
+
+    FileProcessor o-- FileProcessingStrategy
+    FileProcessingStrategy <|.. CSVProcessingStrategy
+    FileProcessingStrategy <|.. XMLProcessingStrategy
+```
+
+## Observer Pattern
 
 ### Implementation
 
-The Template Method Pattern is implemented in the `BaseProvider` class, which defines a skeleton for the file processing algorithm while allowing subclasses to override specific steps:
+The Observer Pattern is used for job status notifications:
 
 ```python
-class BaseProvider:
-  # ... other methods ...
+class JobSubject:
+    def __init__(self):
+        self._observers = []
 
-  async def decrypt_file_raw(self, file_path: str, passphrase: str):
-    file_decrypted = file_path
-    if '.gpg' in file_path:
-      file_decrypted = await decrypt_file(file_path, passphrase)
-    file_name = file_decrypted
-    return file_name
+    def register_observer(self, observer):
+        self._observers.append(observer)
 
-  async def unzip_file(self, file_decrypted: str):
-    file_name = file_decrypted
-    if '.gz' in file_decrypted or '.tar.gz' in file_decrypted:
-      file_name = remove_final_extension(file_name)
-      file_extension = '.tar.gz' if file_name.endswith('.tar.gz') else '.gz'
-      await unzip_file(file_decrypted, file_name, file_extension)
-    move_file(file_name, 'output/'+file_name)
-    return file_name
+    def remove_observer(self, observer):
+        self._observers.remove(observer)
+
+    def notify_observers(self, job_id, status):
+        for observer in self._observers:
+            observer.update(job_id, status)
+
+class JobObserver(ABC):
+    @abstractmethod
+    def update(self, job_id, status):
+        pass
+
+class LoggingObserver(JobObserver):
+    def update(self, job_id, status):
+        logging.info(f"Job {job_id} status: {status}")
+
+class NotificationObserver(JobObserver):
+    def update(self, job_id, status):
+        # Send notification
+        pass
 ```
 
 ### Usage
 
-Provider-specific classes can override parts of this process while maintaining the overall algorithm structure.
+```python
+job_subject = JobSubject()
+job_subject.register_observer(LoggingObserver())
+job_subject.register_observer(NotificationObserver())
+
+# When job status changes
+job_subject.notify_observers("job-123", "completed")
+```
 
 ### Benefits
 
-- **Code Reuse**: Common processing steps are defined once in the base class
-- **Consistency**: Ensures a consistent approach across different providers
-- **Flexibility**: Allows customization of specific steps when needed
+- **Loose Coupling**: Subjects don't need to know about observers
+- **Broadcast Communication**: One-to-many notification
+- **Dynamic Relationships**: Observers can be added/removed at runtime
 
-## Dependency Injection
+### Diagram
+
+```mermaid
+classDiagram
+    class JobSubject {
+        -List~JobObserver~ _observers
+        +register_observer(observer)
+        +remove_observer(observer)
+        +notify_observers(job_id, status)
+    }
+
+    class JobObserver {
+        <<interface>>
+        +update(job_id, status)
+    }
+
+    class LoggingObserver {
+        +update(job_id, status)
+    }
+
+    class NotificationObserver {
+        +update(job_id, status)
+    }
+
+    JobSubject o-- JobObserver
+    JobObserver <|.. LoggingObserver
+    JobObserver <|.. NotificationObserver
+```
+
+## Singleton Pattern
 
 ### Implementation
 
-Dependency Injection is used throughout the codebase to provide configuration data, queues, and other dependencies to components:
+The Singleton Pattern is used for database connection management:
 
 ```python
-# Injecting configuration data
-def __init__(self, data: dict[str, str | None], provider_name: str):
-  self.data = data
-  self.provider_name = provider_name
+class DatabaseConnection:
+    _instance = None
 
-# Injecting a queue for progress updates
-async def start_logic(queue: asyncio.Queue, provider_str: str):
-  # ...
-  await queue.put(float("{:.2f}".format(percentage)))
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+            cls._instance.connect()
+        return cls._instance
+
+    def connect(self):
+        # Initialize connection
+        pass
 ```
 
 ### Usage
 
-Dependencies are passed explicitly to functions and classes rather than being created or retrieved internally.
+```python
+# Both variables reference the same instance
+db1 = DatabaseConnection()
+db2 = DatabaseConnection()
+```
 
 ### Benefits
 
-- **Testability**: Components can be tested in isolation with mock dependencies
-- **Flexibility**: Dependencies can be swapped without changing component code
-- **Decoupling**: Reduces tight coupling between components
+- **Resource Efficiency**: Prevents multiple instances of resource-heavy objects
+- **Global Access**: Provides a global access point to the instance
+- **Consistent State**: Ensures consistent state across the application
 
-## Observer Pattern (via Queue)
+### Diagram
+
+```mermaid
+classDiagram
+    class DatabaseConnection {
+        -DatabaseConnection _instance
+        +DatabaseConnection()
+        +connect()
+        +execute_query(query)
+    }
+
+    note for DatabaseConnection "Only one instance\nexists throughout\nthe application"
+```
+
+## Repository Pattern
 
 ### Implementation
 
-The Observer Pattern is implemented through the use of an asyncio Queue to report progress from the main logic back to the background task:
+The Repository Pattern is used for data access abstraction:
 
 ```python
-async def start_new_task(uid: UUID, param: int, provider: str) -> None:
-  queue = asyncio.Queue()
-  task = asyncio.create_task(start_logic(queue, provider))
-  while progress := await queue.get():  # monitor task progress
-    jobs[uid].progress = progress
+class JobRepository:
+    def get_by_id(self, job_id):
+        # Retrieve job from database
+        pass
 
-  jobs[uid].status = "complete"
-  await asyncio.sleep(1)
-  jobs.pop(uid)
+    def save(self, job):
+        # Save job to database
+        pass
+
+    def update(self, job):
+        # Update job in database
+        pass
+
+    def delete(self, job_id):
+        # Delete job from database
+        pass
 ```
 
 ### Usage
 
-The main logic function acts as the subject, publishing progress updates to the queue, while the background task acts as the observer, updating the job status based on these updates.
-
-### Benefits
-
-- **Loose Coupling**: The main logic doesn't need to know about the job tracking system
-- **Asynchronous Updates**: Progress can be reported asynchronously without blocking the main processing
-- **Separation of Concerns**: Processing logic is separated from progress tracking
-
-## Command Pattern (via Background Tasks)
-
-### Implementation
-
-The Command Pattern is evident in the way background tasks are created and executed:
-
 ```python
-background_tasks.add_task(start_new_task, new_task.uid, 100, body.provider)
+job_repo = JobRepository()
+job = job_repo.get_by_id("job-123")
+job.status = "completed"
+job_repo.update(job)
 ```
-
-### Usage
-
-The API endpoint creates a command (background task) that encapsulates the request and its parameters, which is then executed independently.
 
 ### Benefits
 
-- **Asynchronous Execution**: Commands run without blocking the API response
-- **Queueing**: FastAPI's background task system handles queuing and execution
-- **Decoupling**: Command execution is decoupled from API request handling
+- **Abstraction**: Hides data access details
+- **Testability**: Easy to mock for unit testing
+- **Data Access Centralization**: Central place for data access logic
 
-## Proxy Pattern (SSH/SFTP)
+### Diagram
 
-### Implementation
+```mermaid
+classDiagram
+    class JobRepository {
+        +get_by_id(job_id) Job
+        +save(job) void
+        +update(job) void
+        +delete(job_id) void
+    }
 
-The Proxy Pattern is used to provide a common interface for accessing remote files over SSH/SFTP:
+    class Job {
+        +String id
+        +String status
+        +Dict parameters
+    }
 
-```python
-@sync_to_async
-def connect_ssh_raw(
-  self,
-  server_env: str,
-  user_name: str,
-  hostname: str,
-  port: int,
-  private_key_path: str | None = None,
-  password: str | None = None,
-):
-  ssh_client = paramiko.SSHClient()
-  ssh_client.load_system_host_keys()
-  # ... setup and connect ...
-  return ssh_client
+    class Database {
+        <<external>>
+    }
+
+    JobRepository --> Job
+    JobRepository --> Database
 ```
-
-### Usage
-
-The SFTP/SSH connection acts as a proxy for files on remote systems, providing a local interface to remote resources.
-
-### Benefits
-
-- **Access Control**: Centralized handling of authentication and access
-- **Abstraction**: Simplifies interactions with remote file systems
-- **Resource Management**: Centralizes connection management and cleanup
-
-## Adapter Pattern
-
-### Implementation
-
-The Adapter Pattern is used to adapt various file formats (encrypted, compressed) to a common interface:
-
-```python
-async def decrypt_file_raw(self, file_path: str, passphrase: str):
-  file_decrypted = file_path
-  if '.gpg' in file_path:
-    file_decrypted = await decrypt_file(file_path, passphrase)
-  file_name = file_decrypted
-  return file_name
-
-async def unzip_file(self, file_decrypted: str):
-  # ... handle various compression formats ...
-```
-
-### Usage
-
-These adapter methods convert files from their original format to a format that can be processed by the system, regardless of how they were originally stored.
-
-### Benefits
-
-- **Format Independence**: Processing logic can work with files regardless of their original format
-- **Simplification**: Complex format handling is encapsulated in adapter methods
-- **Extensibility**: New file formats can be supported by adding new adapter methods
-
-## Design Patterns Interaction
-
-The design patterns in the system don't exist in isolation but work together to create a cohesive architecture:
-
-```
-┌──────────────────┐                ┌──────────────────┐
-│                  │                │                  │
-│  Factory Pattern │───creates────►│  Strategy Pattern │
-│                  │                │                  │
-└──────────────────┘                └──────────────────┘
-                                          │
-                                          │ implements
-                                          ▼
-┌──────────────────┐                ┌──────────────────┐
-│                  │                │                  │
-│  Command Pattern │◄───triggers───│ Template Method  │
-│                  │                │                  │
-└──────────────────┘                └──────────────────┘
-        │                                   │
-        │                                   │
-        ▼                                   ▼
-┌──────────────────┐                ┌──────────────────┐
-│                  │                │                  │
-│ Observer Pattern │◄───updates────│  Adapter Pattern  │
-│                  │                │                  │
-└──────────────────┘                └──────────────────┘
-                                          │
-                                          │
-                                          ▼
-                                   ┌──────────────────┐
-                                   │                  │
-                                   │   Proxy Pattern  │
-                                   │                  │
-                                   └──────────────────┘
-```
-
-## Conclusion
-
-The Octo project demonstrates the effective use of multiple design patterns to create a flexible, maintainable architecture. These patterns work together to:
-
-1. **Decouple Components**: Each component has a single responsibility and minimal knowledge of other components
-2. **Facilitate Extension**: New providers and file types can be added with minimal changes to existing code
-3. **Promote Reuse**: Common functionality is encapsulated and reused across the system
-4. **Improve Testability**: Components can be tested in isolation with mock dependencies
-
-By understanding these design patterns and their interactions, developers can maintain and extend the system more effectively, following the established architectural principles.

@@ -6,205 +6,114 @@ The FastAPI server is the central component of the Octo system, providing a mode
 
 ## Server Structure
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                      FastAPI Application                     │
-│                                                             │
-│  ┌─────────────────┐           ┌─────────────────────────┐  │
-│  │                 │           │                         │  │
-│  │  API Endpoints  │◄─────────►│  Background Task System │  │
-│  │                 │           │                         │  │
-│  └─────────────────┘           └─────────────────────────┘  │
-│           │                                │                │
-│           │                                │                │
-│           ▼                                ▼                │
-│  ┌─────────────────┐           ┌─────────────────────────┐  │
-│  │                 │           │                         │  │
-│  │ Authentication  │           │      Job Management     │  │
-│  │                 │           │                         │  │
-│  └─────────────────┘           └─────────────────────────┘  │
-│                                          │                  │
-│                                          │                  │
-│                                          ▼                  │
-│                              ┌─────────────────────────┐    │
-│                              │                         │    │
-│                              │  Main Logic Processing  │    │
-│                              │                         │    │
-│                              └─────────────────────────┘    │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph FastAPI["FastAPI Application"]
+        API["API Endpoints"] <--> Background["Background Task System"]
+        API --> Auth["Authentication"]
+        Background --> JobMgmt["Job Management"]
+        JobMgmt --> Logic["Main Logic Processing"]
+    end
 ```
 
-## Key Components
+The FastAPI application is organized into several interconnected components:
 
-### 1. API Endpoints
+1. **API Endpoints**: RESTful endpoints for client interactions
+2. **Background Task System**: Manages asynchronous job execution
+3. **Authentication**: Handles API key verification and access control
+4. **Job Management**: Tracks and controls job execution state
+5. **Main Logic Processing**: Implements the core business logic
 
-The FastAPI server exposes two main endpoints:
+## Endpoint Structure
 
-- **POST /** - Creates a new job for a specified provider
-  - Requires authentication via API key
-  - Takes a `RootBody` object containing the provider name
-  - Returns a job object with a unique ID and initial status
+```mermaid
+classDiagram
+    class BaseRouter {
+        +prefix: str
+        +router: APIRouter
+        +register_routes()
+    }
 
-- **GET /tasks** - Lists all current jobs and their statuses
-  - Requires authentication via API key
-  - Returns a dictionary of all active jobs
+    class ProviderRouter {
+        +get_providers()
+        +get_provider(provider_id)
+        +create_job(provider_id)
+    }
 
-```python
-@app.post("/", dependencies=[Depends(api_key_auth)])
-def test(background_tasks: BackgroundTasks, body: RootBody):
-    print('body', body);
-    existing_jobs = [job for job in jobs.values() if job.provider == body.provider]
-    if existing_jobs:
-        return {"message": "A job with the same provider is already in progress"}
-    new_task = Job()
-    new_task.provider = body.provider
-    jobs[new_task.uid] = new_task
-    background_tasks.add_task(start_new_task, new_task.uid, 100, body.provider)
-    return new_task
+    class JobRouter {
+        +get_jobs()
+        +get_job(job_id)
+        +cancel_job(job_id)
+    }
 
-@app.get("/tasks", dependencies=[Depends(api_key_auth)])
-async def status_handler():
-    return jobs
+    class AuthRouter {
+        +login()
+        +verify_token()
+    }
+
+    BaseRouter <|-- ProviderRouter
+    BaseRouter <|-- JobRouter
+    BaseRouter <|-- AuthRouter
 ```
 
-### 2. Authentication System
+The API endpoints are organized into router classes that inherit from a common base router:
 
-The server uses OAuth2 with API key authentication:
+1. **ProviderRouter**: Handles provider-related operations
+2. **JobRouter**: Manages job operations (listing, retrieval, cancellation)
+3. **AuthRouter**: Handles authentication operations
 
-```python
-# API key storage
-api_keys = [
-    data.get('API_KEY')
-]
+## Background Tasks
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
-
-def api_key_auth(api_key: str = Depends(oauth2_scheme)):
-    if api_key not in api_keys:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Forbidden"
-        )
+```mermaid
+flowchart LR
+    API["API Request"] --> TaskQueue["Task Queue"]
+    TaskQueue --> Worker1["Worker 1"]
+    TaskQueue --> Worker2["Worker 2"]
+    TaskQueue --> WorkerN["Worker N"]
+    Worker1 --> DB[(Database)]
+    Worker2 --> DB
+    WorkerN --> DB
 ```
 
-The API key is loaded from environment variables and validated on each request using FastAPI's dependency injection system.
+The background task system uses asyncio to manage concurrent job execution:
 
-### 3. Job Management System
+1. API requests trigger the creation of background tasks
+2. Tasks are queued and executed by worker processes
+3. Workers update the database with status information
+4. The system is designed to be scalable with multiple workers
 
-Jobs are represented using Pydantic models and stored in memory:
+## Authentication Flow
 
-```python
-class Job(BaseModel):
-    uid: UUID = Field(default_factory=uuid4)
-    status: str = "in_progress"
-    progress: int = 0
-    result: int = None
-    provider: str = None
+```mermaid
+sequenceDiagram
+    participant Client
+    participant API as API Endpoint
+    participant Auth as Auth Service
+    participant DB as Database
 
-jobs: Dict[UUID, Job] = {}  # Dict as job storage
+    Client->>API: Request with API Key
+    API->>Auth: Validate API Key
+    Auth->>DB: Check API Key in Database
+    DB-->>Auth: API Key Valid/Invalid
+    Auth-->>API: Authentication Result
+    API-->>Client: Response (or 401 Unauthorized)
 ```
 
-Each job has:
-- A unique identifier (`uid`)
-- A status field (`in_progress` or `complete`)
-- A progress percentage
-- A result field (for storing any result data)
-- A provider name
+The authentication system uses API keys for secure access:
 
-### 4. Background Task System
+1. Clients send an API key with each request
+2. The API endpoint forwards the key to the authentication service
+3. The service checks the key against the database
+4. If valid, the request proceeds; otherwise, an unauthorized response is returned
 
-FastAPI's background tasks are used to run jobs asynchronously:
+## Data Models
 
-```python
-async def start_new_task(uid: UUID, param: int, provider: str) -> None:
-    queue = asyncio.Queue()
-    task = asyncio.create_task(start_logic(queue, provider))
-    while progress := await queue.get():  # monitor task progress
-        jobs[uid].progress = progress
+The system uses Pydantic models for data validation and SQLAlchemy models for database interactions.
 
-    jobs[uid].status = "complete"
-    await asyncio.sleep(1)
-    jobs.pop(uid)
-```
+## Exception Handling
 
-The background task system:
-1. Creates an asyncio queue for progress updates
-2. Starts the main logic as an asyncio task
-3. Continuously updates job progress from the queue
-4. Marks the job as complete and removes it after completion
+The server implements a global exception handler that catches all exceptions and returns appropriate HTTP responses.
 
-### 5. Main Processing Logic
+## Configuration
 
-The main processing logic is decoupled from the server and imported from the `src.main_logic` module:
-
-```python
-task = asyncio.create_task(start_logic(queue, provider))
-```
-
-This separation of concerns allows the main processing logic to evolve independently from the API server.
-
-## Data Flow
-
-```
-1. Client makes API request with API key
-2. Server authenticates the request
-3. Server creates a new job instance
-4. Server launches a background task
-5. Background task runs the main processing logic
-6. Main logic reports progress via queue
-7. Background task updates job status
-8. Client can check job status via GET /tasks endpoint
-```
-
-## Concurrency and Performance Considerations
-
-The FastAPI server leverages Python's asyncio to handle concurrent requests efficiently. Key performance aspects include:
-
-1. **Asynchronous Task Processing**:
-   - Jobs run asynchronously as background tasks
-   - The main API routes remain responsive even during long-running jobs
-
-2. **One Job Per Provider**:
-   - The system prevents multiple jobs for the same provider from running simultaneously
-   - This prevents race conditions when accessing provider resources
-
-3. **In-Memory Job Storage**:
-   - Jobs are stored in memory for fast access
-   - Jobs are automatically removed when completed to prevent memory leaks
-
-4. **Progress Reporting**:
-   - Uses an asyncio Queue for efficient progress updates
-   - Progress is reported as a percentage, allowing clients to track job completion
-
-## Error Handling
-
-The server includes several error handling mechanisms:
-
-1. **API Authentication Errors**:
-   - Invalid API keys result in a 401 Unauthorized response
-
-2. **Provider Validation**:
-   - Non-existent providers are detected early in the process
-
-3. **Job Duplication Prevention**:
-   - Attempts to create duplicate jobs for the same provider are rejected
-
-4. **Exception Handling in Tasks**:
-   - The main logic includes exception handling to prevent unhandled exceptions from crashing the server
-
-## Future Enhancements
-
-Potential enhancements to the FastAPI server architecture:
-
-1. **Persistent Job Storage**:
-   - Implement a database backend for jobs to survive server restarts
-
-2. **Job Cancellation**:
-   - Add an endpoint to cancel running jobs
-
-3. **Scheduled Jobs**:
-   - Add support for scheduled/recurring jobs
-
-4. **Detailed Job Logs**:
-   - Enhance job objects to include detailed logs and error information
+The server uses environment variables and configuration files to define runtime behavior.

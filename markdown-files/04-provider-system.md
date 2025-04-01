@@ -6,341 +6,203 @@ The Provider System is a core component of the Octo application, responsible for
 
 ## System Architecture
 
-```
-┌───────────────────────────────────────────────────────────────────┐
-│                          Provider System                          │
-│                                                                   │
-│   ┌───────────────────┐        ┌───────────────────────────────┐  │
-│   │                   │        │                               │  │
-│   │  ProviderFactory  │───────►│          BaseProvider         │  │
-│   │                   │ creates│   (Abstract Provider Class)    │  │
-│   └───────────────────┘        └─────────────────┬─────────────┘  │
-│                                                  │                │
-│                                                  │ extends        │
-│                                                  │                │
-│                      ┌─────────────────────────────────────────┐  │
-│                      │                                         │  │
-│                      │                                         │  │
-│   ┌─────────────────▼─────┐             ┌─────────────────────▼─┐ │
-│   │                       │             │                       │ │
-│   │    AffirmProvider     │             │   BloombergProvider   │ │
-│   │                       │             │                       │ │
-│   └───────────────────────┘             └───────────────────────┘ │
-│                                                                   │
-│                         Concrete Providers                        │
-│                                                                   │
-└───────────────────────────────────────────────────────────────────┘
-```
+```mermaid
+classDiagram
+    direction TB
 
-## Component Details
+    class ProviderFactory {
+        +get_provider(data) BaseProvider
+    }
 
-### Provider Factory
+    class BaseProvider {
+        <<abstract>>
+        +connect()
+        +fetch_files()
+        +process_files()
+        +upload_files()
+    }
 
-The `ProviderFactory` class is responsible for creating the appropriate provider instance based on the provider name:
+    class AffirmProvider {
+        +connect()
+        +fetch_files()
+        +process_files()
+        +upload_files()
+    }
 
-```python
-class ProviderFactory():
-  def __init__(self, provider):
-    self.provider = provider
+    class BloombergProvider {
+        +connect()
+        +fetch_files()
+        +process_files()
+        +upload_files()
+    }
 
-  def get_provider(self, data) -> BaseProvider | None:
-    if self.provider == "affirm":
-      from src.core.providers.affirm import AffirmProvider
-      return AffirmProvider(data)
-    elif self.provider == "bloomberg":
-      from src.core.providers.bloomberg import BloombergProvider
-      return BloombergProvider(data)
-    else:
-      return None
+    ProviderFactory ..> BaseProvider : creates
+    BaseProvider <|-- AffirmProvider : extends
+    BaseProvider <|-- BloombergProvider : extends
+
+    note for ProviderFactory "Creates appropriate provider\nbased on input parameters"
+    note for BaseProvider "Defines interface for\nall providers"
 ```
 
-**Key Features:**
-- Lazy loading of provider modules (only imports what's needed)
-- Single responsibility of creating provider instances
-- Extensible design for adding new providers
+The Provider System consists of several key components:
 
-### Base Provider
-
-The `BaseProvider` class is an abstract base class that defines the interface for all provider implementations:
-
-```python
-class BaseProvider:
-  def __init__(self, data: dict[str, str | None], provider_name: str):
-    self.data = data
-    self.provider_name = provider_name
-    self.sftp_client = None
-    self.ssh_client = None
-
-  def get_bucket_name():
-    pass
-
-  def connect_ssh():
-    pass
-
-  async def sftp_download(self, file_path: str):
-    pass
-
-  def sft_list_inbox(self):
-    pass
-
-  async def get_pending_files(self, saved_files_arr:list[str]):
-    pass
-
-  def get_sub_folder(self, file_name: str):
-    pass
-
-  def upload_file(self, file_name: str):
-    pass
-
-  def decrypt_file():
-    pass
-
-  # Other methods...
-```
-
-**Key Features:**
-- Defines the contract that all providers must implement
-- Provides common utility methods for file handling
-- Manages shared resources like SSH connections
-
-### Concrete Providers
-
-Concrete provider classes implement the specific logic for interacting with each provider:
-
-**AffirmProvider Example:**
-```python
-class AffirmProvider(BaseProvider):
-  def __init__(self, data):
-    super().__init__(data, 'affirm')
-
-  def get_bucket_name(self):
-    return self.data.get('S3_BUCKET_AFFIRM')
-
-  # Other provider-specific implementations...
-```
-
-**Key Features:**
-- Provider-specific configuration (bucket names, connection details)
-- Custom file handling logic if needed
-- Proper implementation of all required interface methods
+1. **ProviderFactory**: Creates instances of specific providers based on input parameters
+2. **BaseProvider**: An abstract class defining the interface for all providers
+3. **Concrete Providers**: Implementations for specific data sources (Affirm, Bloomberg)
 
 ## Provider Workflow
 
-Each provider follows the same general workflow, with provider-specific implementations for each step:
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Factory as ProviderFactory
+    participant Provider as Concrete Provider
+    participant ExternalAPI as External API
+    participant S3 as AWS S3
 
-```
-┌──────────────┐
-│              │
-│ Connect to   │
-│ Provider     │
-│              │
-└──────┬───────┘
-       │
-       ▼
-┌──────────────┐
-│              │
-│ List Files   │
-│ to Process   │
-│              │
-└──────┬───────┘
-       │
-       ▼
-┌──────────────┐
-│              │
-│ Download     │
-│ Files        │
-│              │
-└──────┬───────┘
-       │
-       ▼
-┌──────────────┐
-│              │
-│ Decrypt      │
-│ Files        │
-│              │
-└──────┬───────┘
-       │
-       ▼
-┌──────────────┐
-│              │
-│ Process      │
-│ Files        │
-│              │
-└──────┬───────┘
-       │
-       ▼
-┌──────────────┐
-│              │
-│ Upload to S3 │
-│              │
-└──────────────┘
+    Client->>Factory: get_provider(provider_name, data)
+    Factory->>Provider: create provider instance
+    Factory-->>Client: return provider instance
+    Client->>Provider: process_files()
+    Provider->>ExternalAPI: connect()
+    ExternalAPI-->>Provider: connection established
+    Provider->>ExternalAPI: fetch_files()
+    ExternalAPI-->>Provider: raw files
+    Provider->>Provider: decrypt_files()
+    Provider->>Provider: transform_files()
+    Provider->>S3: upload_files()
+    S3-->>Provider: upload confirmation
+    Provider-->>Client: processing result
 ```
 
-### Connection to Provider
+The typical workflow for a provider includes:
 
-Each provider implements its own connection method:
+1. Client requests a provider instance from the factory
+2. Factory creates the appropriate provider based on the provider name
+3. Client calls processing methods on the provider
+4. Provider connects to the external API/SFTP/etc.
+5. Provider fetches, processes, and uploads files
+6. Results are returned to the client
+
+## Provider Interface
+
+The BaseProvider abstract class defines the following interface:
 
 ```python
-async def connect_ssh(self):
-  hostname = self.data.get('SFTP_HOSTNAME_PROVIDER')
-  username = self.data.get('SFTP_USERNAME_PROVIDER')
-  port = int(self.data.get('SFTP_PORT_PROVIDER'))
-  server_env = self.data.get('SERVER_ENV')
-  private_key_path = self.data.get('PRIVATE_KEY_PATH_PROVIDER')
-  self.ssh_client = await self.connect_ssh_raw(server_env, username, hostname, port, private_key_path)
-  return self.ssh_client
+class BaseProvider(ABC):
+    def __init__(self, data):
+        self.data = data
+        self.connection = None
+
+    @abstractmethod
+    def connect(self):
+        """Establish connection to the provider"""
+        pass
+
+    @abstractmethod
+    def fetch_files(self):
+        """Fetch files from the provider"""
+        pass
+
+    @abstractmethod
+    def process_files(self):
+        """Process the fetched files"""
+        pass
+
+    @abstractmethod
+    def upload_files(self, destination):
+        """Upload processed files"""
+        pass
+
+    def cleanup(self):
+        """Clean up temporary files"""
+        # Default implementation
+        pass
 ```
 
-### File Listing
+## Implementing a New Provider
 
-Providers implement logic to list files that need to be processed:
-
-```python
-async def get_pending_files(self, saved_files_arr: list[str]):
-  sftp_client = await self.sft_list_inbox()
-  remote_files = sftp_client.listdir("inbox/")
-  return items_not_contained_in_list(remote_files, saved_files_arr)
+```mermaid
+flowchart TD
+    A[Create new provider class] --> B[Inherit from BaseProvider]
+    B --> C[Implement all abstract methods]
+    C --> D[Add provider to ProviderFactory]
+    D --> E[Test new provider]
+    E --> F[Document the new provider]
 ```
 
-### File Download
+To add a new provider:
 
-Each provider downloads files from its source:
+1. Create a new provider class that inherits from BaseProvider
+2. Implement all required methods (connect, fetch_files, process_files, upload_files)
+3. Add the new provider to the ProviderFactory class
+4. Test the new provider with sample data
+5. Document the specifics of the new provider
 
-```python
-async def sftp_download(self, file_path: str):
-  sftp_client = paramiko.SFTPClient.from_transport(self.ssh_client.get_transport())
-  print(f"Downloading {file_path}")
-  sftp_client.get(f"inbox/{file_path}", file_path)
-  sftp_client.close()
+## Provider-Specific Configurations
+
+Each provider may have specific configuration requirements:
+
+```mermaid
+classDiagram
+    class BaseProviderConfig {
+        +str provider_name
+        +str base_url
+        +dict credentials
+    }
+
+    class AffirmProviderConfig {
+        +str sftp_host
+        +int sftp_port
+        +str sftp_username
+        +str sftp_password
+        +str gpg_key_path
+    }
+
+    class BloombergProviderConfig {
+        +str api_key
+        +str api_secret
+        +str endpoint_url
+        +int retry_limit
+    }
+
+    BaseProviderConfig <|-- AffirmProviderConfig
+    BaseProviderConfig <|-- BloombergProviderConfig
 ```
 
-### File Decryption
+Configurations are stored in environment variables or configuration files and loaded at runtime.
 
-Providers handle decryption if files are encrypted:
+## Error Handling and Retries
 
-```python
-async def decrypt_file(self, file_path: str):
-  passphrase = self.data.get('GPG_PASSPHRASE_PROVIDER')
-  file_name = await self.decrypt_file_raw(file_path, passphrase)
-  return file_name
+The Provider System implements robust error handling and retry mechanisms:
+
+```mermaid
+flowchart TD
+    A[Provider Method Call] --> B{Success?}
+    B -->|Yes| C[Return Result]
+    B -->|No| D{Retryable Error?}
+    D -->|Yes| E[Retry with Backoff]
+    E --> B
+    D -->|No| F[Log Error and Raise Exception]
 ```
 
-### File Upload
+Errors are categorized as:
+- **Retryable**: Connection issues, timeouts, temporary service failures
+- **Non-retryable**: Authentication failures, invalid parameters, permission issues
 
-After processing, files are uploaded to S3:
+## Security Considerations
 
-```python
-async def upload_file(self, file_name: str):
-  bucket_name = self.get_bucket_name()
-  await self.upload_file_raw(file_name, bucket_name)
+Provider connections implement security best practices:
+
+```mermaid
+flowchart LR
+    A[Credentials] -->|Encrypted| B[Credential Store]
+    B -->|Decrypted at Runtime| C[Provider Connection]
+    C -->|Secure Protocol| D[External Service]
 ```
 
-## Extending the Provider System
-
-### Adding a New Provider
-
-To add a new provider to the system:
-
-1. **Create a new provider class** that extends `BaseProvider`:
-
-```python
-# src/core/providers/new_provider.py
-from src.core.providers.base import BaseProvider
-
-class NewProvider(BaseProvider):
-  def __init__(self, data):
-    super().__init__(data, 'new_provider')
-
-  def get_bucket_name(self):
-    return self.data.get('S3_BUCKET_NEW_PROVIDER')
-
-  # Implement all required methods...
-```
-
-2. **Update the factory** to create instances of the new provider:
-
-```python
-def get_provider(self, data) -> BaseProvider | None:
-  if self.provider == "affirm":
-    from src.core.providers.affirm import AffirmProvider
-    return AffirmProvider(data)
-  elif self.provider == "bloomberg":
-    from src.core.providers.bloomberg import BloombergProvider
-    return BloombergProvider(data)
-  elif self.provider == "new_provider":
-    from src.core.providers.new_provider import NewProvider
-    return NewProvider(data)
-  else:
-    return None
-```
-
-3. **Add environment variables** for the new provider in `.env` or environment configuration.
-
-4. **Test the new provider** by sending a request with the new provider name.
-
-### Provider Requirements
-
-When implementing a new provider, ensure it:
-
-1. **Extends BaseProvider**: Inherits and implements all required methods
-2. **Handles Authentication**: Implements correct authentication for the provider
-3. **Manages Resources**: Properly acquires and releases resources (connections, files)
-4. **Reports Progress**: Uses the queue to report progress during processing
-5. **Handles Errors**: Includes appropriate error handling and reporting
-
-## Configuration
-
-Providers are configured through environment variables loaded via the `get_env_data()` function:
-
-```python
-data = get_env_data()
-providerObject = ProviderFactory(provider_str)
-provider = providerObject.get_provider(data)
-```
-
-Common configuration parameters include:
-
-- **S3_BUCKET_PROVIDER**: S3 bucket name for storing files
-- **SFTP_HOSTNAME_PROVIDER**: SFTP server hostname
-- **SFTP_USERNAME_PROVIDER**: SFTP username
-- **SFTP_PORT_PROVIDER**: SFTP port number
-- **SERVER_ENV**: Environment (dev/prod)
-- **PRIVATE_KEY_PATH_PROVIDER**: Path to SSH private key
-- **GPG_PASSPHRASE_PROVIDER**: Passphrase for GPG decryption
-
-## Error Handling
-
-Providers should implement robust error handling:
-
-```python
-try:
-  # Provider operation
-except Exception as e:
-  print(f"an error occurred while processing file {file_path}: {e}")
-  # Clean up resources, report error, continue if possible
-```
-
-The main logic also includes error handling to prevent provider errors from crashing the entire process.
-
-## Best Practices
-
-When working with the Provider System:
-
-1. **Follow the Interface**: Implement all methods defined in `BaseProvider`
-2. **Resource Management**: Always close connections and clean up files
-3. **Error Handling**: Handle and report errors gracefully
-4. **Progress Reporting**: Update the progress queue regularly
-5. **Idempotent Operations**: Ensure operations can be safely retried
-6. **Minimal Dependencies**: Keep provider implementations focused on their specific tasks
-
-## Testing
-
-Providers should be tested to ensure they:
-
-1. Connect to their data sources correctly
-2. List and filter files properly
-3. Download, decrypt, and process files as expected
-4. Upload files to S3 with the correct structure
-5. Handle errors gracefully
-
-Use mocking to test providers without actual external connections during development.
+Security measures include:
+- Encrypted credential storage
+- Secure connection protocols (SFTP, HTTPS)
+- Limited access permissions
+- Audit logging of all provider operations
