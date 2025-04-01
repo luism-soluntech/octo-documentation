@@ -1,0 +1,2015 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Octo FastAPI Documentation</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      line-height: 1.6;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 20px;
+      color: #333;
+    }
+    h1 {
+      border-bottom: 2px solid #4285f4;
+      padding-bottom: 10px;
+      margin-top: 40px;
+    }
+    h2 {
+      margin-top: 30px;
+      border-bottom: 1px solid #e0e0e0;
+      padding-bottom: 5px;
+    }
+    h3 {
+      margin-top: 25px;
+    }
+    code {
+      background-color: #f5f5f5;
+      padding: 2px 4px;
+      border-radius: 4px;
+      font-family: monospace;
+    }
+    pre {
+      background-color: #f5f5f5;
+      padding: 15px;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-family: monospace;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+    }
+    table, th, td {
+      border: 1px solid #ddd;
+    }
+    th, td {
+      padding: 10px;
+      text-align: left;
+    }
+    th {
+      background-color: #f2f2f2;
+    }
+    blockquote {
+      border-left: 4px solid #ddd;
+      margin-left: 0;
+      padding-left: 20px;
+      color: #666;
+    }
+    a {
+      color: #4285f4;
+      text-decoration: none;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+    img {
+      max-width: 100%;
+    }
+    .toc {
+      background-color: #f9f9f9;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+    .toc ul {
+      list-style-type: none;
+    }
+    .page-break {
+      page-break-after: always;
+    }
+    @media print {
+      body {
+        font-size: 12pt;
+      }
+      h1 {
+        font-size: 24pt;
+      }
+      h2 {
+        font-size: 18pt;
+      }
+      h3 {
+        font-size: 14pt;
+      }
+      pre, code {
+        font-size: 10pt;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="document">
+<div class="toc"><h2>Table of Contents</h2><ul><li><a href="#section-0">FastAPI Server Documentation</a></li><li><a href="#section-1">System Overview</a></li><li><a href="#section-2">FastAPI Server Architecture</a></li><li><a href="#section-3">Design Patterns</a></li><li><a href="#section-4">Provider System</a></li><li><a href="#section-5">File Processing Workflow</a></li><li><a href="#section-6">Security Implementation</a></li><li><a href="#section-7">AWS Integration</a></li><li><a href="#section-8">Error Handling</a></li></ul></div><div id="section-0" class="section"><h1>FastAPI Server Documentation</h1>
+<p>This documentation provides a comprehensive overview of the FastAPI server implemented in the Octo project. It covers the server architecture, workflow, design patterns, and key components.</p>
+<h2>Table of Contents</h2>
+<ol>
+<li><a href="./01-system-overview.md">System Overview</a></li>
+<li><a href="./02-fastapi-architecture.md">FastAPI Server Architecture</a></li>
+<li><a href="./03-design-patterns.md">Design Patterns</a></li>
+<li><a href="./04-provider-system.md">Provider System</a></li>
+<li><a href="./05-file-processing.md">File Processing Workflow</a></li>
+<li><a href="./06-security.md">Security Implementation</a></li>
+<li><a href="./07-aws-integration.md">AWS Integration</a></li>
+<li><a href="./08-error-handling.md">Error Handling</a></li>
+</ol>
+<h2>Additional Resources</h2>
+<ul>
+<li><a href="./octo-fastapi-documentation.docx">Word Document</a>: Contains the complete documentation in a single file.</li>
+<li><a href="./images/">Images Directory</a>: Contains all diagrams used in the documentation.</li>
+</ul>
+<h2>Getting Started</h2>
+<p>To understand the overall system, start with the <a href="./01-system-overview.md">System Overview</a> document. For developers implementing new providers or extending the system, the <a href="./03-design-patterns.md">Design Patterns</a> and <a href="./04-provider-system.md">Provider System</a> documents will be most relevant.</p>
+</div><div class="page-break"></div><div id="section-1" class="section"><h1>System Overview</h1>
+<h2>Introduction</h2>
+<p>The Octo project is a data processing system designed to automate the retrieval, decryption, and storage of financial data from various providers like Affirm and Bloomberg. The system is built around a FastAPI server that manages asynchronous jobs to process files from these providers.</p>
+<h2>System Architecture</h2>
+<pre><code>┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│                 │     │                 │     │                 │
+│  External API   │     │   FastAPI       │     │   AWS S3        │
+│  Providers      │◄────┤   Server        ├────►│   Storage       │
+│  (Affirm,       │     │                 │     │                 │
+│   Bloomberg)    │     │                 │     │                 │
+└─────────────────┘     └────────┬────────┘     └─────────────────┘
+                                 │
+                                 │
+                                 ▼
+                        ┌─────────────────┐
+                        │                 │
+                        │  Data Analysis  │
+                        │  Scripts        │
+                        │                 │
+                        └─────────────────┘
+</code></pre>
+<p>The system consists of the following key components:</p>
+<ol>
+<li><strong>FastAPI Server</strong>: The core of the system, handling API requests, authentication, and job management.</li>
+<li><strong>Provider System</strong>: Handles connections to external data providers (Affirm, Bloomberg) via SFTP.</li>
+<li><strong>File Processing Pipeline</strong>: Manages the download, decryption, decompression, and upload of files.</li>
+<li><strong>AWS S3 Integration</strong>: Stores processed files in an organized structure.</li>
+<li><strong>Data Analysis Scripts</strong>: Various Python and Jupyter notebook scripts for analyzing the financial data.</li>
+</ol>
+<h2>Key Workflows</h2>
+<h3>Main Data Processing Workflow</h3>
+<pre><code>┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐
+│          │    │          │    │          │    │          │    │          │
+│  Connect │    │ Download │    │  Decrypt │    │  Process │    │  Upload  │
+│  to SFTP ├───►│  Files   ├───►│  Files   ├───►│  Files   ├───►│  to S3   │
+│          │    │          │    │          │    │          │    │          │
+└──────────┘    └──────────┘    └──────────┘    └──────────┘    └──────────┘
+</code></pre>
+<ol>
+<li>The server connects to the provider's SFTP server</li>
+<li>Files are downloaded from the provider</li>
+<li>Files are decrypted (if encrypted with GPG)</li>
+<li>Files are processed (unzipped, transformed as needed)</li>
+<li>Processed files are uploaded to AWS S3 for storage and further analysis</li>
+</ol>
+<h3>API Job Management Workflow</h3>
+<pre><code>┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐
+│          │    │          │    │          │    │          │
+│  API     │    │  Create  │    │  Execute │    │  Update  │
+│  Request ├───►│  Job     ├───►│  Job     │───►│  Status  │
+│          │    │          │    │  Task    │    │          │
+└──────────┘    └──────────┘    └──────────┘    └──────────┘
+</code></pre>
+<ol>
+<li>API receives a request to process files from a specific provider</li>
+<li>A job is created and tracked in the system</li>
+<li>The job is executed as a background task</li>
+<li>Job status is updated as processing progresses</li>
+</ol>
+<h2>Technology Stack</h2>
+<ul>
+<li><strong>Backend Framework</strong>: FastAPI</li>
+<li><strong>Authentication</strong>: OAuth2 with API key authentication</li>
+<li><strong>Asynchronous Processing</strong>: Python asyncio</li>
+<li><strong>File Transfer</strong>: Paramiko (SSH/SFTP)</li>
+<li><strong>File Encryption</strong>: GnuPG</li>
+<li><strong>Cloud Storage</strong>: AWS S3</li>
+<li><strong>Data Analysis</strong>: Python, Pandas, NumPy, etc.</li>
+</ul>
+<h2>Deployment</h2>
+<p>The system is designed to be deployed on an AWS EC2 instance using Docker. The SETUP.MD file provides detailed instructions for setting up the environment.</p>
+<h2>Next Steps</h2>
+<p>For more detailed information about specific components, refer to the following documents:</p>
+<ul>
+<li><a href="./02-fastapi-architecture.md">FastAPI Server Architecture</a></li>
+<li><a href="./03-design-patterns.md">Design Patterns</a></li>
+<li><a href="./04-provider-system.md">Provider System</a></li>
+</ul>
+</div><div class="page-break"></div><div id="section-2" class="section"><h1>FastAPI Server Architecture</h1>
+<h2>Introduction</h2>
+<p>The FastAPI server is the central component of the Octo system, providing a modern, high-performance API for triggering and managing data processing jobs. This document details the architecture and implementation of the FastAPI server.</p>
+<h2>Server Structure</h2>
+<pre><code>┌─────────────────────────────────────────────────────────────┐
+│                      FastAPI Application                     │
+│                                                             │
+│  ┌─────────────────┐           ┌─────────────────────────┐  │
+│  │                 │           │                         │  │
+│  │  API Endpoints  │◄─────────►│  Background Task System │  │
+│  │                 │           │                         │  │
+│  └─────────────────┘           └─────────────────────────┘  │
+│           │                                │                │
+│           │                                │                │
+│           ▼                                ▼                │
+│  ┌─────────────────┐           ┌─────────────────────────┐  │
+│  │                 │           │                         │  │
+│  │ Authentication  │           │      Job Management     │  │
+│  │                 │           │                         │  │
+│  └─────────────────┘           └─────────────────────────┘  │
+│                                          │                  │
+│                                          │                  │
+│                                          ▼                  │
+│                              ┌─────────────────────────┐    │
+│                              │                         │    │
+│                              │  Main Logic Processing  │    │
+│                              │                         │    │
+│                              └─────────────────────────┘    │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+</code></pre>
+<h2>Key Components</h2>
+<h3>1. API Endpoints</h3>
+<p>The FastAPI server exposes two main endpoints:</p>
+<ul>
+<li>
+<p><strong>POST /</strong> - Creates a new job for a specified provider</p>
+<ul>
+<li>Requires authentication via API key</li>
+<li>Takes a <code>RootBody</code> object containing the provider name</li>
+<li>Returns a job object with a unique ID and initial status</li>
+</ul>
+</li>
+<li>
+<p><strong>GET /tasks</strong> - Lists all current jobs and their statuses</p>
+<ul>
+<li>Requires authentication via API key</li>
+<li>Returns a dictionary of all active jobs</li>
+</ul>
+</li>
+</ul>
+<pre><code class="language-python">@app.post(&quot;/&quot;, dependencies=[Depends(api_key_auth)])
+def test(background_tasks: BackgroundTasks, body: RootBody):
+    print('body', body);
+    existing_jobs = [job for job in jobs.values() if job.provider == body.provider]
+    if existing_jobs:
+        return {&quot;message&quot;: &quot;A job with the same provider is already in progress&quot;}
+    new_task = Job()
+    new_task.provider = body.provider
+    jobs[new_task.uid] = new_task
+    background_tasks.add_task(start_new_task, new_task.uid, 100, body.provider)
+    return new_task
+
+@app.get(&quot;/tasks&quot;, dependencies=[Depends(api_key_auth)])
+async def status_handler():
+    return jobs
+</code></pre>
+<h3>2. Authentication System</h3>
+<p>The server uses OAuth2 with API key authentication:</p>
+<pre><code class="language-python"># API key storage
+api_keys = [
+    data.get('API_KEY')
+]
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl=&quot;token&quot;)
+
+def api_key_auth(api_key: str = Depends(oauth2_scheme)):
+    if api_key not in api_keys:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=&quot;Forbidden&quot;
+        )
+</code></pre>
+<p>The API key is loaded from environment variables and validated on each request using FastAPI's dependency injection system.</p>
+<h3>3. Job Management System</h3>
+<p>Jobs are represented using Pydantic models and stored in memory:</p>
+<pre><code class="language-python">class Job(BaseModel):
+    uid: UUID = Field(default_factory=uuid4)
+    status: str = &quot;in_progress&quot;
+    progress: int = 0
+    result: int = None
+    provider: str = None
+
+jobs: Dict[UUID, Job] = {}  # Dict as job storage
+</code></pre>
+<p>Each job has:</p>
+<ul>
+<li>A unique identifier (<code>uid</code>)</li>
+<li>A status field (<code>in_progress</code> or <code>complete</code>)</li>
+<li>A progress percentage</li>
+<li>A result field (for storing any result data)</li>
+<li>A provider name</li>
+</ul>
+<h3>4. Background Task System</h3>
+<p>FastAPI's background tasks are used to run jobs asynchronously:</p>
+<pre><code class="language-python">async def start_new_task(uid: UUID, param: int, provider: str) -&gt; None:
+    queue = asyncio.Queue()
+    task = asyncio.create_task(start_logic(queue, provider))
+    while progress := await queue.get():  # monitor task progress
+        jobs[uid].progress = progress
+
+    jobs[uid].status = &quot;complete&quot;
+    await asyncio.sleep(1)
+    jobs.pop(uid)
+</code></pre>
+<p>The background task system:</p>
+<ol>
+<li>Creates an asyncio queue for progress updates</li>
+<li>Starts the main logic as an asyncio task</li>
+<li>Continuously updates job progress from the queue</li>
+<li>Marks the job as complete and removes it after completion</li>
+</ol>
+<h3>5. Main Processing Logic</h3>
+<p>The main processing logic is decoupled from the server and imported from the <code>src.main_logic</code> module:</p>
+<pre><code class="language-python">task = asyncio.create_task(start_logic(queue, provider))
+</code></pre>
+<p>This separation of concerns allows the main processing logic to evolve independently from the API server.</p>
+<h2>Data Flow</h2>
+<pre><code>1. Client makes API request with API key
+2. Server authenticates the request
+3. Server creates a new job instance
+4. Server launches a background task
+5. Background task runs the main processing logic
+6. Main logic reports progress via queue
+7. Background task updates job status
+8. Client can check job status via GET /tasks endpoint
+</code></pre>
+<h2>Concurrency and Performance Considerations</h2>
+<p>The FastAPI server leverages Python's asyncio to handle concurrent requests efficiently. Key performance aspects include:</p>
+<ol>
+<li>
+<p><strong>Asynchronous Task Processing</strong>:</p>
+<ul>
+<li>Jobs run asynchronously as background tasks</li>
+<li>The main API routes remain responsive even during long-running jobs</li>
+</ul>
+</li>
+<li>
+<p><strong>One Job Per Provider</strong>:</p>
+<ul>
+<li>The system prevents multiple jobs for the same provider from running simultaneously</li>
+<li>This prevents race conditions when accessing provider resources</li>
+</ul>
+</li>
+<li>
+<p><strong>In-Memory Job Storage</strong>:</p>
+<ul>
+<li>Jobs are stored in memory for fast access</li>
+<li>Jobs are automatically removed when completed to prevent memory leaks</li>
+</ul>
+</li>
+<li>
+<p><strong>Progress Reporting</strong>:</p>
+<ul>
+<li>Uses an asyncio Queue for efficient progress updates</li>
+<li>Progress is reported as a percentage, allowing clients to track job completion</li>
+</ul>
+</li>
+</ol>
+<h2>Error Handling</h2>
+<p>The server includes several error handling mechanisms:</p>
+<ol>
+<li>
+<p><strong>API Authentication Errors</strong>:</p>
+<ul>
+<li>Invalid API keys result in a 401 Unauthorized response</li>
+</ul>
+</li>
+<li>
+<p><strong>Provider Validation</strong>:</p>
+<ul>
+<li>Non-existent providers are detected early in the process</li>
+</ul>
+</li>
+<li>
+<p><strong>Job Duplication Prevention</strong>:</p>
+<ul>
+<li>Attempts to create duplicate jobs for the same provider are rejected</li>
+</ul>
+</li>
+<li>
+<p><strong>Exception Handling in Tasks</strong>:</p>
+<ul>
+<li>The main logic includes exception handling to prevent unhandled exceptions from crashing the server</li>
+</ul>
+</li>
+</ol>
+<h2>Future Enhancements</h2>
+<p>Potential enhancements to the FastAPI server architecture:</p>
+<ol>
+<li>
+<p><strong>Persistent Job Storage</strong>:</p>
+<ul>
+<li>Implement a database backend for jobs to survive server restarts</li>
+</ul>
+</li>
+<li>
+<p><strong>Job Cancellation</strong>:</p>
+<ul>
+<li>Add an endpoint to cancel running jobs</li>
+</ul>
+</li>
+<li>
+<p><strong>Scheduled Jobs</strong>:</p>
+<ul>
+<li>Add support for scheduled/recurring jobs</li>
+</ul>
+</li>
+<li>
+<p><strong>Detailed Job Logs</strong>:</p>
+<ul>
+<li>Enhance job objects to include detailed logs and error information</li>
+</ul>
+</li>
+</ol>
+</div><div class="page-break"></div><div id="section-3" class="section"><h1>Design Patterns</h1>
+<h2>Introduction</h2>
+<p>The Octo FastAPI server implementation uses several design patterns to achieve a clean, maintainable architecture. This document outlines the key design patterns used in the system and explains how they contribute to the overall architecture.</p>
+<h2>Factory Pattern</h2>
+<h3>Implementation</h3>
+<p>The Factory Pattern is used to create provider-specific handlers through the <code>ProviderFactory</code> class:</p>
+<pre><code class="language-python">class ProviderFactory():
+  def __init__(self, provider):
+    self.provider = provider
+
+  def get_provider(self, data) -&gt; BaseProvider | None:
+    if self.provider == &quot;affirm&quot;:
+      from src.core.providers.affirm import AffirmProvider
+      return AffirmProvider(data)
+    elif self.provider == &quot;bloomberg&quot;:
+      from src.core.providers.bloomberg import BloombergProvider
+      return BloombergProvider(data)
+    else:
+      return None
+</code></pre>
+<h3>Usage</h3>
+<p>The factory is used in the main logic to create the appropriate provider instance:</p>
+<pre><code class="language-python">providerObject = ProviderFactory(provider_str)
+provider = providerObject.get_provider(data)
+</code></pre>
+<h3>Benefits</h3>
+<ul>
+<li><strong>Encapsulation</strong>: Hides the complexity of provider creation</li>
+<li><strong>Extensibility</strong>: New providers can be added by extending the factory without modifying client code</li>
+<li><strong>Conditional Loading</strong>: Only imports the necessary provider modules when needed</li>
+</ul>
+<h2>Strategy Pattern</h2>
+<h3>Implementation</h3>
+<p>The Strategy Pattern is implemented through the <code>BaseProvider</code> abstract class and its concrete implementations:</p>
+<pre><code class="language-python">class BaseProvider:
+  def __init__(self, data: dict[str, str | None], provider_name: str):
+    self.data = data
+    self.provider_name = provider_name
+    self.sftp_client = None
+    self.ssh_client = None
+
+  def get_bucket_name():
+    pass
+
+  def connect_ssh():
+    pass
+
+  # other abstract methods...
+</code></pre>
+<p>Concrete implementations for different providers:</p>
+<pre><code class="language-python">class AffirmProvider(BaseProvider):
+  def __init__(self, data):
+    super().__init__(data, 'affirm')
+
+  def get_bucket_name(self):
+    return self.data.get('S3_BUCKET_AFFIRM')
+
+  # other overridden methods...
+</code></pre>
+<h3>Usage</h3>
+<p>The client code (main logic) interacts with the abstract <code>BaseProvider</code> interface, unaware of the specific provider implementation:</p>
+<pre><code class="language-python">await provider.get_save_files(bucket_name)
+ssh_client = await provider.connect_ssh()
+pending_files = await provider.get_pending_files(saved_files_arr)
+# ...
+</code></pre>
+<h3>Benefits</h3>
+<ul>
+<li><strong>Interchangeability</strong>: Different provider implementations can be used interchangeably</li>
+<li><strong>Separation of Concerns</strong>: Each provider encapsulates its specific behavior</li>
+<li><strong>Extensibility</strong>: New providers can be added without changing the client code</li>
+</ul>
+<h2>Template Method Pattern</h2>
+<h3>Implementation</h3>
+<p>The Template Method Pattern is implemented in the <code>BaseProvider</code> class, which defines a skeleton for the file processing algorithm while allowing subclasses to override specific steps:</p>
+<pre><code class="language-python">class BaseProvider:
+  # ... other methods ...
+
+  async def decrypt_file_raw(self, file_path: str, passphrase: str):
+    file_decrypted = file_path
+    if '.gpg' in file_path:
+      file_decrypted = await decrypt_file(file_path, passphrase)
+    file_name = file_decrypted
+    return file_name
+
+  async def unzip_file(self, file_decrypted: str):
+    file_name = file_decrypted
+    if '.gz' in file_decrypted or '.tar.gz' in file_decrypted:
+      file_name = remove_final_extension(file_name)
+      file_extension = '.tar.gz' if file_name.endswith('.tar.gz') else '.gz'
+      await unzip_file(file_decrypted, file_name, file_extension)
+    move_file(file_name, 'output/'+file_name)
+    return file_name
+</code></pre>
+<h3>Usage</h3>
+<p>Provider-specific classes can override parts of this process while maintaining the overall algorithm structure.</p>
+<h3>Benefits</h3>
+<ul>
+<li><strong>Code Reuse</strong>: Common processing steps are defined once in the base class</li>
+<li><strong>Consistency</strong>: Ensures a consistent approach across different providers</li>
+<li><strong>Flexibility</strong>: Allows customization of specific steps when needed</li>
+</ul>
+<h2>Dependency Injection</h2>
+<h3>Implementation</h3>
+<p>Dependency Injection is used throughout the codebase to provide configuration data, queues, and other dependencies to components:</p>
+<pre><code class="language-python"># Injecting configuration data
+def __init__(self, data: dict[str, str | None], provider_name: str):
+  self.data = data
+  self.provider_name = provider_name
+
+# Injecting a queue for progress updates
+async def start_logic(queue: asyncio.Queue, provider_str: str):
+  # ...
+  await queue.put(float(&quot;{:.2f}&quot;.format(percentage)))
+</code></pre>
+<h3>Usage</h3>
+<p>Dependencies are passed explicitly to functions and classes rather than being created or retrieved internally.</p>
+<h3>Benefits</h3>
+<ul>
+<li><strong>Testability</strong>: Components can be tested in isolation with mock dependencies</li>
+<li><strong>Flexibility</strong>: Dependencies can be swapped without changing component code</li>
+<li><strong>Decoupling</strong>: Reduces tight coupling between components</li>
+</ul>
+<h2>Observer Pattern (via Queue)</h2>
+<h3>Implementation</h3>
+<p>The Observer Pattern is implemented through the use of an asyncio Queue to report progress from the main logic back to the background task:</p>
+<pre><code class="language-python">async def start_new_task(uid: UUID, param: int, provider: str) -&gt; None:
+  queue = asyncio.Queue()
+  task = asyncio.create_task(start_logic(queue, provider))
+  while progress := await queue.get():  # monitor task progress
+    jobs[uid].progress = progress
+
+  jobs[uid].status = &quot;complete&quot;
+  await asyncio.sleep(1)
+  jobs.pop(uid)
+</code></pre>
+<h3>Usage</h3>
+<p>The main logic function acts as the subject, publishing progress updates to the queue, while the background task acts as the observer, updating the job status based on these updates.</p>
+<h3>Benefits</h3>
+<ul>
+<li><strong>Loose Coupling</strong>: The main logic doesn't need to know about the job tracking system</li>
+<li><strong>Asynchronous Updates</strong>: Progress can be reported asynchronously without blocking the main processing</li>
+<li><strong>Separation of Concerns</strong>: Processing logic is separated from progress tracking</li>
+</ul>
+<h2>Command Pattern (via Background Tasks)</h2>
+<h3>Implementation</h3>
+<p>The Command Pattern is evident in the way background tasks are created and executed:</p>
+<pre><code class="language-python">background_tasks.add_task(start_new_task, new_task.uid, 100, body.provider)
+</code></pre>
+<h3>Usage</h3>
+<p>The API endpoint creates a command (background task) that encapsulates the request and its parameters, which is then executed independently.</p>
+<h3>Benefits</h3>
+<ul>
+<li><strong>Asynchronous Execution</strong>: Commands run without blocking the API response</li>
+<li><strong>Queueing</strong>: FastAPI's background task system handles queuing and execution</li>
+<li><strong>Decoupling</strong>: Command execution is decoupled from API request handling</li>
+</ul>
+<h2>Proxy Pattern (SSH/SFTP)</h2>
+<h3>Implementation</h3>
+<p>The Proxy Pattern is used to provide a common interface for accessing remote files over SSH/SFTP:</p>
+<pre><code class="language-python">@sync_to_async
+def connect_ssh_raw(
+  self,
+  server_env: str,
+  user_name: str,
+  hostname: str,
+  port: int,
+  private_key_path: str | None = None,
+  password: str | None = None,
+):
+  ssh_client = paramiko.SSHClient()
+  ssh_client.load_system_host_keys()
+  # ... setup and connect ...
+  return ssh_client
+</code></pre>
+<h3>Usage</h3>
+<p>The SFTP/SSH connection acts as a proxy for files on remote systems, providing a local interface to remote resources.</p>
+<h3>Benefits</h3>
+<ul>
+<li><strong>Access Control</strong>: Centralized handling of authentication and access</li>
+<li><strong>Abstraction</strong>: Simplifies interactions with remote file systems</li>
+<li><strong>Resource Management</strong>: Centralizes connection management and cleanup</li>
+</ul>
+<h2>Adapter Pattern</h2>
+<h3>Implementation</h3>
+<p>The Adapter Pattern is used to adapt various file formats (encrypted, compressed) to a common interface:</p>
+<pre><code class="language-python">async def decrypt_file_raw(self, file_path: str, passphrase: str):
+  file_decrypted = file_path
+  if '.gpg' in file_path:
+    file_decrypted = await decrypt_file(file_path, passphrase)
+  file_name = file_decrypted
+  return file_name
+
+async def unzip_file(self, file_decrypted: str):
+  # ... handle various compression formats ...
+</code></pre>
+<h3>Usage</h3>
+<p>These adapter methods convert files from their original format to a format that can be processed by the system, regardless of how they were originally stored.</p>
+<h3>Benefits</h3>
+<ul>
+<li><strong>Format Independence</strong>: Processing logic can work with files regardless of their original format</li>
+<li><strong>Simplification</strong>: Complex format handling is encapsulated in adapter methods</li>
+<li><strong>Extensibility</strong>: New file formats can be supported by adding new adapter methods</li>
+</ul>
+<h2>Design Patterns Interaction</h2>
+<p>The design patterns in the system don't exist in isolation but work together to create a cohesive architecture:</p>
+<pre><code>┌──────────────────┐                ┌──────────────────┐
+│                  │                │                  │
+│  Factory Pattern │───creates────►│  Strategy Pattern │
+│                  │                │                  │
+└──────────────────┘                └──────────────────┘
+                                          │
+                                          │ implements
+                                          ▼
+┌──────────────────┐                ┌──────────────────┐
+│                  │                │                  │
+│  Command Pattern │◄───triggers───│ Template Method  │
+│                  │                │                  │
+└──────────────────┘                └──────────────────┘
+        │                                   │
+        │                                   │
+        ▼                                   ▼
+┌──────────────────┐                ┌──────────────────┐
+│                  │                │                  │
+│ Observer Pattern │◄───updates────│  Adapter Pattern  │
+│                  │                │                  │
+└──────────────────┘                └──────────────────┘
+                                          │
+                                          │
+                                          ▼
+                                   ┌──────────────────┐
+                                   │                  │
+                                   │   Proxy Pattern  │
+                                   │                  │
+                                   └──────────────────┘
+</code></pre>
+<h2>Conclusion</h2>
+<p>The Octo project demonstrates the effective use of multiple design patterns to create a flexible, maintainable architecture. These patterns work together to:</p>
+<ol>
+<li><strong>Decouple Components</strong>: Each component has a single responsibility and minimal knowledge of other components</li>
+<li><strong>Facilitate Extension</strong>: New providers and file types can be added with minimal changes to existing code</li>
+<li><strong>Promote Reuse</strong>: Common functionality is encapsulated and reused across the system</li>
+<li><strong>Improve Testability</strong>: Components can be tested in isolation with mock dependencies</li>
+</ol>
+<p>By understanding these design patterns and their interactions, developers can maintain and extend the system more effectively, following the established architectural principles.</p>
+</div><div class="page-break"></div><div id="section-4" class="section"><h1>Provider System</h1>
+<h2>Introduction</h2>
+<p>The Provider System is a core component of the Octo application, responsible for handling the interaction with different data providers such as Affirm and Bloomberg. This document details the architecture of the Provider System, how it works, and how to extend it with new providers.</p>
+<h2>System Architecture</h2>
+<pre><code>┌───────────────────────────────────────────────────────────────────┐
+│                          Provider System                          │
+│                                                                   │
+│   ┌───────────────────┐        ┌───────────────────────────────┐  │
+│   │                   │        │                               │  │
+│   │  ProviderFactory  │───────►│          BaseProvider         │  │
+│   │                   │ creates│   (Abstract Provider Class)    │  │
+│   └───────────────────┘        └─────────────────┬─────────────┘  │
+│                                                  │                │
+│                                                  │ extends        │
+│                                                  │                │
+│                      ┌─────────────────────────────────────────┐  │
+│                      │                                         │  │
+│                      │                                         │  │
+│   ┌─────────────────▼─────┐             ┌─────────────────────▼─┐ │
+│   │                       │             │                       │ │
+│   │    AffirmProvider     │             │   BloombergProvider   │ │
+│   │                       │             │                       │ │
+│   └───────────────────────┘             └───────────────────────┘ │
+│                                                                   │
+│                         Concrete Providers                        │
+│                                                                   │
+└───────────────────────────────────────────────────────────────────┘
+</code></pre>
+<h2>Component Details</h2>
+<h3>Provider Factory</h3>
+<p>The <code>ProviderFactory</code> class is responsible for creating the appropriate provider instance based on the provider name:</p>
+<pre><code class="language-python">class ProviderFactory():
+  def __init__(self, provider):
+    self.provider = provider
+
+  def get_provider(self, data) -&gt; BaseProvider | None:
+    if self.provider == &quot;affirm&quot;:
+      from src.core.providers.affirm import AffirmProvider
+      return AffirmProvider(data)
+    elif self.provider == &quot;bloomberg&quot;:
+      from src.core.providers.bloomberg import BloombergProvider
+      return BloombergProvider(data)
+    else:
+      return None
+</code></pre>
+<p><strong>Key Features:</strong></p>
+<ul>
+<li>Lazy loading of provider modules (only imports what's needed)</li>
+<li>Single responsibility of creating provider instances</li>
+<li>Extensible design for adding new providers</li>
+</ul>
+<h3>Base Provider</h3>
+<p>The <code>BaseProvider</code> class is an abstract base class that defines the interface for all provider implementations:</p>
+<pre><code class="language-python">class BaseProvider:
+  def __init__(self, data: dict[str, str | None], provider_name: str):
+    self.data = data
+    self.provider_name = provider_name
+    self.sftp_client = None
+    self.ssh_client = None
+
+  def get_bucket_name():
+    pass
+
+  def connect_ssh():
+    pass
+
+  async def sftp_download(self, file_path: str):
+    pass
+
+  def sft_list_inbox(self):
+    pass
+
+  async def get_pending_files(self, saved_files_arr:list[str]):
+    pass
+
+  def get_sub_folder(self, file_name: str):
+    pass
+
+  def upload_file(self, file_name: str):
+    pass
+
+  def decrypt_file():
+    pass
+
+  # Other methods...
+</code></pre>
+<p><strong>Key Features:</strong></p>
+<ul>
+<li>Defines the contract that all providers must implement</li>
+<li>Provides common utility methods for file handling</li>
+<li>Manages shared resources like SSH connections</li>
+</ul>
+<h3>Concrete Providers</h3>
+<p>Concrete provider classes implement the specific logic for interacting with each provider:</p>
+<p><strong>AffirmProvider Example:</strong></p>
+<pre><code class="language-python">class AffirmProvider(BaseProvider):
+  def __init__(self, data):
+    super().__init__(data, 'affirm')
+
+  def get_bucket_name(self):
+    return self.data.get('S3_BUCKET_AFFIRM')
+
+  # Other provider-specific implementations...
+</code></pre>
+<p><strong>Key Features:</strong></p>
+<ul>
+<li>Provider-specific configuration (bucket names, connection details)</li>
+<li>Custom file handling logic if needed</li>
+<li>Proper implementation of all required interface methods</li>
+</ul>
+<h2>Provider Workflow</h2>
+<p>Each provider follows the same general workflow, with provider-specific implementations for each step:</p>
+<pre><code>┌──────────────┐
+│              │
+│ Connect to   │
+│ Provider     │
+│              │
+└──────┬───────┘
+       │
+       ▼
+┌──────────────┐
+│              │
+│ List Files   │
+│ to Process   │
+│              │
+└──────┬───────┘
+       │
+       ▼
+┌──────────────┐
+│              │
+│ Download     │
+│ Files        │
+│              │
+└──────┬───────┘
+       │
+       ▼
+┌──────────────┐
+│              │
+│ Decrypt      │
+│ Files        │
+│              │
+└──────┬───────┘
+       │
+       ▼
+┌──────────────┐
+│              │
+│ Process      │
+│ Files        │
+│              │
+└──────┬───────┘
+       │
+       ▼
+┌──────────────┐
+│              │
+│ Upload to S3 │
+│              │
+└──────────────┘
+</code></pre>
+<h3>Connection to Provider</h3>
+<p>Each provider implements its own connection method:</p>
+<pre><code class="language-python">async def connect_ssh(self):
+  hostname = self.data.get('SFTP_HOSTNAME_PROVIDER')
+  username = self.data.get('SFTP_USERNAME_PROVIDER')
+  port = int(self.data.get('SFTP_PORT_PROVIDER'))
+  server_env = self.data.get('SERVER_ENV')
+  private_key_path = self.data.get('PRIVATE_KEY_PATH_PROVIDER')
+  self.ssh_client = await self.connect_ssh_raw(server_env, username, hostname, port, private_key_path)
+  return self.ssh_client
+</code></pre>
+<h3>File Listing</h3>
+<p>Providers implement logic to list files that need to be processed:</p>
+<pre><code class="language-python">async def get_pending_files(self, saved_files_arr: list[str]):
+  sftp_client = await self.sft_list_inbox()
+  remote_files = sftp_client.listdir(&quot;inbox/&quot;)
+  return items_not_contained_in_list(remote_files, saved_files_arr)
+</code></pre>
+<h3>File Download</h3>
+<p>Each provider downloads files from its source:</p>
+<pre><code class="language-python">async def sftp_download(self, file_path: str):
+  sftp_client = paramiko.SFTPClient.from_transport(self.ssh_client.get_transport())
+  print(f&quot;Downloading {file_path}&quot;)
+  sftp_client.get(f&quot;inbox/{file_path}&quot;, file_path)
+  sftp_client.close()
+</code></pre>
+<h3>File Decryption</h3>
+<p>Providers handle decryption if files are encrypted:</p>
+<pre><code class="language-python">async def decrypt_file(self, file_path: str):
+  passphrase = self.data.get('GPG_PASSPHRASE_PROVIDER')
+  file_name = await self.decrypt_file_raw(file_path, passphrase)
+  return file_name
+</code></pre>
+<h3>File Upload</h3>
+<p>After processing, files are uploaded to S3:</p>
+<pre><code class="language-python">async def upload_file(self, file_name: str):
+  bucket_name = self.get_bucket_name()
+  await self.upload_file_raw(file_name, bucket_name)
+</code></pre>
+<h2>Extending the Provider System</h2>
+<h3>Adding a New Provider</h3>
+<p>To add a new provider to the system:</p>
+<ol>
+<li><strong>Create a new provider class</strong> that extends <code>BaseProvider</code>:</li>
+</ol>
+<pre><code class="language-python"># src/core/providers/new_provider.py
+from src.core.providers.base import BaseProvider
+
+class NewProvider(BaseProvider):
+  def __init__(self, data):
+    super().__init__(data, 'new_provider')
+
+  def get_bucket_name(self):
+    return self.data.get('S3_BUCKET_NEW_PROVIDER')
+
+  # Implement all required methods...
+</code></pre>
+<ol start="2">
+<li><strong>Update the factory</strong> to create instances of the new provider:</li>
+</ol>
+<pre><code class="language-python">def get_provider(self, data) -&gt; BaseProvider | None:
+  if self.provider == &quot;affirm&quot;:
+    from src.core.providers.affirm import AffirmProvider
+    return AffirmProvider(data)
+  elif self.provider == &quot;bloomberg&quot;:
+    from src.core.providers.bloomberg import BloombergProvider
+    return BloombergProvider(data)
+  elif self.provider == &quot;new_provider&quot;:
+    from src.core.providers.new_provider import NewProvider
+    return NewProvider(data)
+  else:
+    return None
+</code></pre>
+<ol start="3">
+<li>
+<p><strong>Add environment variables</strong> for the new provider in <code>.env</code> or environment configuration.</p>
+</li>
+<li>
+<p><strong>Test the new provider</strong> by sending a request with the new provider name.</p>
+</li>
+</ol>
+<h3>Provider Requirements</h3>
+<p>When implementing a new provider, ensure it:</p>
+<ol>
+<li><strong>Extends BaseProvider</strong>: Inherits and implements all required methods</li>
+<li><strong>Handles Authentication</strong>: Implements correct authentication for the provider</li>
+<li><strong>Manages Resources</strong>: Properly acquires and releases resources (connections, files)</li>
+<li><strong>Reports Progress</strong>: Uses the queue to report progress during processing</li>
+<li><strong>Handles Errors</strong>: Includes appropriate error handling and reporting</li>
+</ol>
+<h2>Configuration</h2>
+<p>Providers are configured through environment variables loaded via the <code>get_env_data()</code> function:</p>
+<pre><code class="language-python">data = get_env_data()
+providerObject = ProviderFactory(provider_str)
+provider = providerObject.get_provider(data)
+</code></pre>
+<p>Common configuration parameters include:</p>
+<ul>
+<li><strong>S3_BUCKET_PROVIDER</strong>: S3 bucket name for storing files</li>
+<li><strong>SFTP_HOSTNAME_PROVIDER</strong>: SFTP server hostname</li>
+<li><strong>SFTP_USERNAME_PROVIDER</strong>: SFTP username</li>
+<li><strong>SFTP_PORT_PROVIDER</strong>: SFTP port number</li>
+<li><strong>SERVER_ENV</strong>: Environment (dev/prod)</li>
+<li><strong>PRIVATE_KEY_PATH_PROVIDER</strong>: Path to SSH private key</li>
+<li><strong>GPG_PASSPHRASE_PROVIDER</strong>: Passphrase for GPG decryption</li>
+</ul>
+<h2>Error Handling</h2>
+<p>Providers should implement robust error handling:</p>
+<pre><code class="language-python">try:
+  # Provider operation
+except Exception as e:
+  print(f&quot;an error occurred while processing file {file_path}: {e}&quot;)
+  # Clean up resources, report error, continue if possible
+</code></pre>
+<p>The main logic also includes error handling to prevent provider errors from crashing the entire process.</p>
+<h2>Best Practices</h2>
+<p>When working with the Provider System:</p>
+<ol>
+<li><strong>Follow the Interface</strong>: Implement all methods defined in <code>BaseProvider</code></li>
+<li><strong>Resource Management</strong>: Always close connections and clean up files</li>
+<li><strong>Error Handling</strong>: Handle and report errors gracefully</li>
+<li><strong>Progress Reporting</strong>: Update the progress queue regularly</li>
+<li><strong>Idempotent Operations</strong>: Ensure operations can be safely retried</li>
+<li><strong>Minimal Dependencies</strong>: Keep provider implementations focused on their specific tasks</li>
+</ol>
+<h2>Testing</h2>
+<p>Providers should be tested to ensure they:</p>
+<ol>
+<li>Connect to their data sources correctly</li>
+<li>List and filter files properly</li>
+<li>Download, decrypt, and process files as expected</li>
+<li>Upload files to S3 with the correct structure</li>
+<li>Handle errors gracefully</li>
+</ol>
+<p>Use mocking to test providers without actual external connections during development.</p>
+</div><div class="page-break"></div><div id="section-5" class="section"><h1>File Processing Workflow</h1>
+<h2>Introduction</h2>
+<p>The file processing workflow is a central component of the Octo system, responsible for downloading, decrypting, processing, and storing files from various providers. This document details the end-to-end file processing workflow and each step involved.</p>
+<h2>Overall Workflow</h2>
+<pre><code>┌───────────────┐    ┌───────────────┐    ┌───────────────┐    ┌───────────────┐    ┌───────────────┐
+│               │    │               │    │               │    │               │    │               │
+│  Determine    │    │  Download     │    │  Decrypt      │    │  Process      │    │  Upload       │
+│  Files to     ├───►│  Files from   ├───►│  Files        ├───►│  Files        ├───►│  to S3        │
+│  Process      │    │  Provider     │    │  (if needed)  │    │  (if needed)  │    │  Storage      │
+│               │    │               │    │               │    │               │    │               │
+└───────────────┘    └───────────────┘    └───────────────┘    └───────────────┘    └───────────────┘
+</code></pre>
+<p>The workflow begins when a job is triggered via the API, which results in a call to the <code>start_logic</code> function with a provider name. The function then orchestrates the entire file processing workflow.</p>
+<h2>Main Logic Implementation</h2>
+<p>The main orchestration logic is implemented in the <code>start_logic</code> function:</p>
+<pre><code class="language-python">async def start_logic(queue: asyncio.Queue, provider_str: str):
+  try:
+    start_time = time.time()
+    data = get_env_data()
+    print('start logic')
+    providerObject = ProviderFactory(provider_str)
+    provider = providerObject.get_provider(data)
+    if provider is None:
+      print(f&quot;Provider {provider_str} not found&quot;)
+      await queue.put(None)
+      return
+    bucket_name = provider.get_bucket_name()
+    print('bucket_name', bucket_name)
+    saved_files = await provider.get_save_files(bucket_name)
+    saved_files_arr = []
+    for file in saved_files:
+      file_array = file.split('/')
+      saved_files_arr.append(file_array[len(file_array)-1])
+    ssh_client = await provider.connect_ssh()
+    pending_files = await provider.get_pending_files(saved_files_arr)
+    count = 0
+    total_pending = len(pending_files)
+    files_with_error = []
+    for file_path in pending_files:
+      try:
+        if file_path.endswith('.sig'):
+          continue
+        start_time_file = time.time()
+        await provider.sftp_download(file_path)
+        file_name = await provider.decrypt_file(file_path)
+        file_decrypted = file_name
+        file_name = await provider.unzip_file(file_name)
+        await provider.upload_file(file_name)
+        delete_file(file_decrypted)
+        delete_file(file_path)
+        end_time_file = time.time()
+        elapsed_time_file = end_time_file - start_time_file
+        delete_file('output/'+file_name)
+        count += 1
+        percentage = (count/total_pending) * 100
+        await queue.put(float(&quot;{:.2f}&quot;.format(percentage)))
+        print(f&quot;{bcolors.OKGREEN}processed file (#{count}) {file_name} in {&quot;{:10.2f}&quot;.format(elapsed_time_file)} seconds {bcolors.ENDC}&quot;)
+        print(f&quot;{bcolors.UNDERLINE}--------------------------------------------{bcolors.ENDC}&quot;)
+      except Exception as e:
+        count += 1
+        delete_file(file_path)
+        percentage = (count/total_pending) * 100
+        await queue.put(float(&quot;{:.2f}&quot;.format(percentage)))
+        files_with_error.append(file_path)
+        print(f&quot;an error occurred while processing file {file_path}: {e}&quot;)
+        print(f&quot;{bcolors.UNDERLINE}--------------------------------------------{bcolors.ENDC}&quot;)
+        continue
+    await close_connection(ssh_client)
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    await queue.put(None)
+    if files_with_error:
+      print(f&quot;{bcolors.FAIL}Files with errors: {files_with_error}{bcolors.ENDC}&quot;)
+    else:
+      print(f&quot;{bcolors.OKGREEN}No files with errors{bcolors.ENDC}&quot;)
+    print(f&quot;{bcolors.WARNING}processed finished in {&quot;{:10.2f}&quot;.format(elapsed_time)} seconds {bcolors.ENDC}&quot;)
+  except Exception as e:
+    print(f&quot;an error occurred: {e}&quot;)
+    await queue.put(None)
+    return
+</code></pre>
+<h2>Detailed Steps</h2>
+<h3>1. Determine Files to Process</h3>
+<p>The first step is to determine which files need to be processed:</p>
+<pre><code class="language-python">saved_files = await provider.get_save_files(bucket_name)
+saved_files_arr = []
+for file in saved_files:
+  file_array = file.split('/')
+  saved_files_arr.append(file_array[len(file_array)-1])
+ssh_client = await provider.connect_ssh()
+pending_files = await provider.get_pending_files(saved_files_arr)
+</code></pre>
+<p>This involves:</p>
+<ol>
+<li>Retrieving a list of files already processed and stored in S3</li>
+<li>Connecting to the provider's SFTP server</li>
+<li>Comparing the files on the SFTP server with those already processed to identify new files</li>
+</ol>
+<h3>2. Download Files</h3>
+<p>For each file that needs processing, the system downloads it from the provider:</p>
+<pre><code class="language-python">await provider.sftp_download(file_path)
+</code></pre>
+<p>The download logic is provider-specific, but typically involves:</p>
+<ol>
+<li>Establishing an SFTP connection using the provider's credentials</li>
+<li>Retrieving the file from the provider's server</li>
+<li>Storing it locally for further processing</li>
+</ol>
+<h3>3. Decrypt Files</h3>
+<p>If the files are encrypted (e.g., with GPG), they are decrypted:</p>
+<pre><code class="language-python">file_name = await provider.decrypt_file(file_path)
+file_decrypted = file_name
+</code></pre>
+<p>The decryption process:</p>
+<ol>
+<li>Uses the provider-specific GPG passphrase</li>
+<li>Decrypts the file using the <code>decrypt_file</code> function</li>
+<li>Returns the path to the decrypted file</li>
+</ol>
+<p>Implementation of the <code>decrypt_file</code> function in the GPG module:</p>
+<pre><code class="language-python">async def decrypt_file(input_file_path: str, passphrase: str) -&gt; str:
+  output_file_path = remove_final_extension(input_file_path)
+
+  gpg = gnupg.GPG()
+  with open(input_file_path, 'rb') as f:
+    status = gpg.decrypt_file(f, passphrase=passphrase, output=output_file_path)
+
+  if status.ok:
+    return output_file_path
+  else:
+    raise Exception(f&quot;Decryption failed: {status.stderr}&quot;)
+</code></pre>
+<h3>4. Process Files</h3>
+<p>Files may need additional processing, such as decompression:</p>
+<pre><code class="language-python">file_name = await provider.unzip_file(file_name)
+</code></pre>
+<p>The <code>unzip_file</code> method in BaseProvider:</p>
+<pre><code class="language-python">async def unzip_file(self, file_decrypted: str):
+  file_name = file_decrypted
+  if '.gz' in file_decrypted or '.tar.gz' in file_decrypted:
+    file_name = remove_final_extension(file_name)
+    file_extension = '.tar.gz' if file_name.endswith('.tar.gz') else '.gz'
+    await unzip_file(file_decrypted, file_name, file_extension)
+  move_file(file_name, 'output/'+file_name)
+  return file_name
+</code></pre>
+<p>This step:</p>
+<ol>
+<li>Identifies the compression format (if any)</li>
+<li>Decompresses the file using the appropriate method</li>
+<li>Moves the processed file to an output directory</li>
+</ol>
+<h3>5. Upload to S3</h3>
+<p>The processed file is uploaded to AWS S3 for storage:</p>
+<pre><code class="language-python">await provider.upload_file(file_name)
+</code></pre>
+<p>This step:</p>
+<ol>
+<li>Determines the appropriate S3 bucket and folder structure</li>
+<li>Uploads the file to S3</li>
+<li>Organizes files in S3 based on their type and provider</li>
+</ol>
+<p>The <code>upload_file_raw</code> method in BaseProvider:</p>
+<pre><code class="language-python">async def upload_file_raw(self, file_name: str, bucket_name: str):
+  sub_folder = &quot;other&quot;
+  if &quot;.csv&quot; in file_name:
+    sub_folder = &quot;csv&quot;
+  elif &quot;.pdf&quot; in file_name:
+    sub_folder = &quot;pdf&quot;
+  elif &quot;.xml&quot; in file_name:
+    sub_folder = &quot;xml&quot;
+  sub_folder = sub_folder + '/' + get_folder_name(file_name, provider=self.provider_name)
+  await s3_upload_file('output/'+file_name, bucket_name, 'data/'+sub_folder+'/'+file_name)
+</code></pre>
+<h3>6. Cleanup</h3>
+<p>After successful processing, temporary files are cleaned up:</p>
+<pre><code class="language-python">delete_file(file_decrypted)
+delete_file(file_path)
+delete_file('output/'+file_name)
+</code></pre>
+<p>Finally, the SSH connection is closed:</p>
+<pre><code class="language-python">await close_connection(ssh_client)
+</code></pre>
+<h2>Progress Reporting</h2>
+<p>Throughout the file processing workflow, progress is reported via the asyncio queue:</p>
+<pre><code class="language-python">percentage = (count/total_pending) * 100
+await queue.put(float(&quot;{:.2f}&quot;.format(percentage)))
+</code></pre>
+<p>This allows the API to track and report job progress to clients.</p>
+<h2>Error Handling</h2>
+<p>The workflow includes comprehensive error handling:</p>
+<ol>
+<li>
+<p><strong>File-Level Error Handling</strong>:</p>
+<pre><code class="language-python">try:
+  # Process file
+except Exception as e:
+  count += 1
+  delete_file(file_path)
+  percentage = (count/total_pending) * 100
+  await queue.put(float(&quot;{:.2f}&quot;.format(percentage)))
+  files_with_error.append(file_path)
+  print(f&quot;an error occurred while processing file {file_path}: {e}&quot;)
+  continue
+</code></pre>
+</li>
+<li>
+<p><strong>Workflow-Level Error Handling</strong>:</p>
+<pre><code class="language-python">try:
+  # Main workflow logic
+except Exception as e:
+  print(f&quot;an error occurred: {e}&quot;)
+  await queue.put(None)
+  return
+</code></pre>
+</li>
+</ol>
+<p>This ensures that:</p>
+<ol>
+<li>Errors processing individual files don't stop the entire job</li>
+<li>Resources are properly cleaned up in case of errors</li>
+<li>Error information is logged for troubleshooting</li>
+<li>The API is notified of job completion even in error cases</li>
+</ol>
+<h2>Performance Considerations</h2>
+<p>The file processing workflow is designed with several performance considerations:</p>
+<ol>
+<li>
+<p><strong>Asynchronous Processing</strong>:</p>
+<ul>
+<li>Uses asyncio for non-blocking I/O operations</li>
+<li>Allows multiple files to be processed efficiently</li>
+</ul>
+</li>
+<li>
+<p><strong>Resource Management</strong>:</p>
+<ul>
+<li>Files are deleted after processing to free up disk space</li>
+<li>SSH connections are properly closed after use</li>
+</ul>
+</li>
+<li>
+<p><strong>Progress Tracking</strong>:</p>
+<ul>
+<li>Regular progress updates allow for monitoring of long-running jobs</li>
+<li>Elapsed time tracking helps identify bottlenecks</li>
+</ul>
+</li>
+<li>
+<p><strong>Error Resilience</strong>:</p>
+<ul>
+<li>Failed files don't stop the entire job</li>
+<li>Files with errors are tracked separately for later investigation</li>
+</ul>
+</li>
+</ol>
+<h2>Extension Points</h2>
+<p>The file processing workflow can be extended in several ways:</p>
+<ol>
+<li>
+<p><strong>New File Formats</strong>:</p>
+<ul>
+<li>Implement new decryption or decompression methods</li>
+<li>Add handling for different file extensions</li>
+</ul>
+</li>
+<li>
+<p><strong>Additional Processing Steps</strong>:</p>
+<ul>
+<li>Add data validation or transformation steps</li>
+<li>Implement additional file processing logic</li>
+</ul>
+</li>
+<li>
+<p><strong>Enhanced Reporting</strong>:</p>
+<ul>
+<li>Add more detailed progress reporting</li>
+<li>Implement file-specific metrics</li>
+</ul>
+</li>
+</ol>
+<h2>Conclusion</h2>
+<p>The file processing workflow is a central component of the Octo system, providing a robust, extensible mechanism for handling files from different providers. By combining provider-specific logic with common file processing steps, the system achieves both flexibility and code reuse.</p>
+<p>Developers working on the system should understand this workflow to effectively maintain and extend the file processing capabilities.</p>
+</div><div class="page-break"></div><div id="section-6" class="section"><h1>Security Implementation</h1>
+<h2>Introduction</h2>
+<p>Security is a critical aspect of the Octo system, which handles potentially sensitive financial data from various providers. This document outlines the security measures implemented throughout the system to protect data and prevent unauthorized access.</p>
+<h2>Authentication and Authorization</h2>
+<h3>API Authentication</h3>
+<p>The FastAPI server implements OAuth2 with API key authentication:</p>
+<pre><code class="language-python"># API key storage
+api_keys = [
+    data.get('API_KEY')
+]
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl=&quot;token&quot;)
+
+def api_key_auth(api_key: str = Depends(oauth2_scheme)):
+    if api_key not in api_keys:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=&quot;Forbidden&quot;
+        )
+</code></pre>
+<p>API keys are loaded from environment variables, ensuring they are not hardcoded in the source code. All API endpoints are protected by this authentication mechanism:</p>
+<pre><code class="language-python">@app.post(&quot;/&quot;, dependencies=[Depends(api_key_auth)])
+def test(background_tasks: BackgroundTasks, body: RootBody):
+    # Handler implementation
+</code></pre>
+<h3>Provider Authentication</h3>
+<p>For provider authentication, the system uses SSH key-based authentication or username/password authentication depending on the provider's requirements:</p>
+<pre><code class="language-python">@sync_to_async
+def connect_ssh_raw(
+  self,
+  server_env: str,
+  user_name: str,
+  hostname: str,
+  port: int,
+  private_key_path: str | None = None,
+  password: str | None = None,
+):
+  ssh_client = paramiko.SSHClient()
+  ssh_client.load_system_host_keys()
+  myfile = None
+  if private_key_path is not None:
+    myfile = paramiko.RSAKey.from_private_key_file(private_key_path)
+  print('server_env', server_env)
+  if server_env == 'dev':
+    proxy = paramiko.proxy.ProxyCommand('/usr/bin/nc -x 127.0.0.1:9090 %s %d' % (hostname, port))
+    ssh_client.connect(hostname=hostname, username=user_name, pkey=myfile, password=password, sock=proxy)
+  else :
+    ssh_client.connect(hostname=hostname, username=user_name, pkey=myfile, password=password)
+  return ssh_client
+</code></pre>
+<h2>Data Protection</h2>
+<h3>Encrypted Data Handling</h3>
+<p>The system can handle encrypted files from providers using GPG:</p>
+<pre><code class="language-python">async def decrypt_file(input_file_path: str, passphrase: str) -&gt; str:
+  output_file_path = remove_final_extension(input_file_path)
+
+  gpg = gnupg.GPG()
+  with open(input_file_path, 'rb') as f:
+    status = gpg.decrypt_file(f, passphrase=passphrase, output=output_file_path)
+
+  if status.ok:
+    return output_file_path
+  else:
+    raise Exception(f&quot;Decryption failed: {status.stderr}&quot;)
+</code></pre>
+<p>Passphrases for GPG decryption are stored as environment variables, not in the code.</p>
+<h3>Secure File Transfer</h3>
+<p>All file transfers between providers and the system use secure protocols:</p>
+<ol>
+<li><strong>SFTP over SSH</strong> for downloading files from providers</li>
+<li><strong>HTTPS</strong> for uploading files to AWS S3</li>
+</ol>
+<pre><code class="language-python"># SFTP download
+async def sftp_download(self, file_path: str):
+  sftp_client = paramiko.SFTPClient.from_transport(self.ssh_client.get_transport())
+  print(f&quot;Downloading {file_path}&quot;)
+  sftp_client.get(f&quot;inbox/{file_path}&quot;, file_path)
+  sftp_client.close()
+
+# S3 upload with HTTPS
+async def s3_upload_file(file_path: str, bucket: str, object_name: str):
+  s3_client = boto3.client('s3')
+  try:
+    s3_client.upload_file(file_path, bucket, object_name)
+    return True
+  except Exception as e:
+    print(f&quot;Error uploading to S3: {e}&quot;)
+    return False
+</code></pre>
+<h3>Resource Cleanup</h3>
+<p>To prevent sensitive data from persisting on disk, the system cleans up temporary files after processing:</p>
+<pre><code class="language-python">delete_file(file_decrypted)
+delete_file(file_path)
+delete_file('output/'+file_name)
+</code></pre>
+<p>The <code>delete_file</code> function securely removes files:</p>
+<pre><code class="language-python">def delete_file(file_path: str):
+  try:
+    if os.path.exists(file_path):
+      os.remove(file_path)
+  except Exception as e:
+    print(f&quot;Error deleting file {file_path}: {e}&quot;)
+</code></pre>
+<h2>Environment Security</h2>
+<h3>Environment Variables</h3>
+<p>Sensitive information such as API keys, passphrases, and connection details are stored as environment variables:</p>
+<pre><code class="language-python">def get_env_data():
+  return {
+    'API_KEY': os.environ.get('API_KEY'),
+    'S3_BUCKET_AFFIRM': os.environ.get('S3_BUCKET_AFFIRM'),
+    'SFTP_HOSTNAME_AFFIRM': os.environ.get('SFTP_HOSTNAME_AFFIRM'),
+    'SFTP_USERNAME_AFFIRM': os.environ.get('SFTP_USERNAME_AFFIRM'),
+    'SFTP_PORT_AFFIRM': os.environ.get('SFTP_PORT_AFFIRM'),
+    'PRIVATE_KEY_PATH_AFFIRM': os.environ.get('PRIVATE_KEY_PATH_AFFIRM'),
+    'GPG_PASSPHRASE_AFFIRM': os.environ.get('GPG_PASSPHRASE_AFFIRM'),
+    # ... other environment variables
+  }
+</code></pre>
+<h3>Secure Development Practices</h3>
+<p>The system's security is also enforced through development practices:</p>
+<ol>
+<li><strong>No Hardcoded Secrets</strong>: All sensitive data is stored in environment variables</li>
+<li><strong>Dependency Management</strong>: Regular updates to dependencies to address security vulnerabilities</li>
+<li><strong>Environment Isolation</strong>: Different configurations for development and production environments</li>
+</ol>
+<h2>AWS Security Configuration</h2>
+<h3>S3 Bucket Security</h3>
+<p>The system interacts with AWS S3 buckets, which should be configured with appropriate security settings:</p>
+<ol>
+<li><strong>Access Control</strong>: S3 buckets should have appropriate bucket policies and IAM roles</li>
+<li><strong>Encryption</strong>: Server-side encryption should be enabled for S3 buckets</li>
+<li><strong>Access Logging</strong>: S3 access logging should be enabled to track access to files</li>
+</ol>
+<h3>Access Management</h3>
+<p>AWS access is managed through IAM roles and policies, with the principle of least privilege:</p>
+<pre><code class="language-python"># S3 client creation with AWS credentials from environment variables
+def s3_client():
+  return boto3.client(
+    's3',
+    aws_access_key_id=os.environ.get('AWS_ACCESS_KEY_ID'),
+    aws_secret_access_key=os.environ.get('AWS_SECRET_ACCESS_KEY')
+  )
+</code></pre>
+<h2>Security Considerations for Deployment</h2>
+<h3>Docker Deployment</h3>
+<p>When deploying the system using Docker (as outlined in SETUP.MD), several security considerations should be addressed:</p>
+<ol>
+<li><strong>Secret Management</strong>: Use environment variables or a secure secret management system</li>
+<li><strong>Network Security</strong>: Configure appropriate network access controls</li>
+<li><strong>Container Security</strong>: Use up-to-date Docker images and security best practices</li>
+</ol>
+<h3>EC2 Instance Security</h3>
+<p>For EC2 deployment:</p>
+<ol>
+<li><strong>Security Groups</strong>: Configure restrictive security groups</li>
+<li><strong>SSH Access</strong>: Limit SSH access to authorized users and IP addresses</li>
+<li><strong>Updates</strong>: Keep the system updated with security patches</li>
+</ol>
+<h2>Error Handling and Logging</h2>
+<p>Proper error handling is essential for security to prevent information leakage and ensure system resilience:</p>
+<pre><code class="language-python">try:
+  # Operation
+except Exception as e:
+  print(f&quot;an error occurred: {e}&quot;)
+  # Handle error without exposing sensitive information
+</code></pre>
+<p>Logs should be carefully managed to:</p>
+<ol>
+<li>Avoid logging sensitive information (such as API keys or passwords)</li>
+<li>Provide enough detail for troubleshooting</li>
+<li>Be stored securely</li>
+</ol>
+<h2>Security Recommendations</h2>
+<p>To enhance the security of the system, consider implementing:</p>
+<ol>
+<li>
+<p><strong>Enhanced Authentication</strong>:</p>
+<ul>
+<li>Implement token expiration and rotation</li>
+<li>Add support for OAuth2 with multiple authentication providers</li>
+</ul>
+</li>
+<li>
+<p><strong>Improved File Security</strong>:</p>
+<ul>
+<li>Implement file integrity checks (checksums)</li>
+<li>Add support for client-side encryption of S3 uploads</li>
+</ul>
+</li>
+<li>
+<p><strong>Monitoring and Alerts</strong>:</p>
+<ul>
+<li>Add security event monitoring</li>
+<li>Implement alerts for suspicious activities</li>
+</ul>
+</li>
+<li>
+<p><strong>Penetration Testing</strong>:</p>
+<ul>
+<li>Regularly test the system for security vulnerabilities</li>
+<li>Address identified issues promptly</li>
+</ul>
+</li>
+<li>
+<p><strong>Audit Logging</strong>:</p>
+<ul>
+<li>Implement comprehensive audit logging</li>
+<li>Store logs securely for compliance and forensic purposes</li>
+</ul>
+</li>
+</ol>
+<h2>Conclusion</h2>
+<p>The Octo system implements various security measures to protect data and ensure secure operations. By using secure protocols, proper authentication, and careful handling of sensitive information, the system maintains a strong security posture.</p>
+<p>Developers should continue to prioritize security when maintaining and extending the system, following the established security practices and implementing recommended enhancements as appropriate.</p>
+</div><div class="page-break"></div><div id="section-7" class="section"><h1>AWS Integration</h1>
+<h2>Introduction</h2>
+<p>The Octo system integrates with various AWS services to facilitate secure storage and deployment of the application. This document details how the system interacts with AWS, focusing primarily on S3 storage for processed files and EC2 for deployment.</p>
+<h2>S3 Storage Integration</h2>
+<h3>Overview</h3>
+<p>Amazon S3 (Simple Storage Service) is used as the primary storage solution for files processed by the Octo system. Files downloaded from various providers are processed and then uploaded to S3 for long-term storage and further analysis.</p>
+<pre><code>┌────────────────┐      ┌────────────────┐      ┌────────────────┐
+│                │      │                │      │                │
+│  Provider      │ ───► │  Octo System   │ ───► │  AWS S3        │
+│  Files         │      │  Processing    │      │  Storage       │
+│                │      │                │      │                │
+└────────────────┘      └────────────────┘      └────────────────┘
+</code></pre>
+<h3>S3 Client Configuration</h3>
+<p>The system interacts with S3 using the AWS SDK for Python (Boto3):</p>
+<pre><code class="language-python"># src/config/s3/main.py
+import boto3
+import asyncio
+from asgiref.sync import sync_to_async
+
+@sync_to_async
+def s3_read_bucket(bucket_name: str):
+    s3_client = boto3.client('s3')
+    objects = s3_client.list_objects_v2(Bucket=bucket_name, Prefix='data/')
+    files = []
+    if 'Contents' in objects:
+        for obj in objects['Contents']:
+            files.append(obj['Key'])
+    return files
+
+@sync_to_async
+def s3_upload_file(file_path: str, bucket: str, object_name: str):
+    s3_client = boto3.client('s3')
+    try:
+        s3_client.upload_file(file_path, bucket, object_name)
+        return True
+    except Exception as e:
+        print(f&quot;Error uploading to S3: {e}&quot;)
+        return False
+</code></pre>
+<h3>Bucket Organization</h3>
+<p>Files in S3 are organized by file type and provider in a structured hierarchy:</p>
+<pre><code>bucket_name/
+├── data/
+│   ├── csv/
+│   │   ├── affirm/
+│   │   │   ├── file1.csv
+│   │   │   └── file2.csv
+│   │   └── bloomberg/
+│   │       ├── file3.csv
+│   │       └── file4.csv
+│   ├── pdf/
+│   │   └── ...
+│   ├── xml/
+│   │   └── ...
+│   └── other/
+│       └── ...
+</code></pre>
+<p>This organization is implemented in the <code>upload_file_raw</code> method:</p>
+<pre><code class="language-python">async def upload_file_raw(self, file_name: str, bucket_name: str):
+  sub_folder = &quot;other&quot;
+  if &quot;.csv&quot; in file_name:
+    sub_folder = &quot;csv&quot;
+  elif &quot;.pdf&quot; in file_name:
+    sub_folder = &quot;pdf&quot;
+  elif &quot;.xml&quot; in file_name:
+    sub_folder = &quot;xml&quot;
+  sub_folder = sub_folder + '/' + get_folder_name(file_name, provider=self.provider_name)
+  await s3_upload_file('output/'+file_name, bucket_name, 'data/'+sub_folder+'/'+file_name)
+</code></pre>
+<p>The <code>get_folder_name</code> function determines the appropriate provider subfolder based on the file name and provider.</p>
+<h3>File Tracking</h3>
+<p>The system tracks which files have already been processed by querying S3:</p>
+<pre><code class="language-python">saved_files = await provider.get_save_files(bucket_name)
+saved_files_arr = []
+for file in saved_files:
+  file_array = file.split('/')
+  saved_files_arr.append(file_array[len(file_array)-1])
+</code></pre>
+<p>This prevents duplicate processing of files that have already been uploaded to S3.</p>
+<h2>EC2 Deployment</h2>
+<h3>Deployment Architecture</h3>
+<p>The Octo system is designed to be deployed on an AWS EC2 instance, as outlined in the SETUP.MD file:</p>
+<pre><code>┌────────────────────────────────────────────────────┐
+│                     EC2 Instance                    │
+│                                                     │
+│   ┌────────────────┐         ┌────────────────┐    │
+│   │                │         │                │    │
+│   │  Docker        │         │  SSH/SFTP      │    │
+│   │  Container     │◄────────┤  Access        │    │
+│   │  (Octo System) │         │                │    │
+│   │                │         │                │    │
+│   └────────────────┘         └────────────────┘    │
+│            │                                        │
+│            │                                        │
+│            ▼                                        │
+│   ┌────────────────┐                               │
+│   │                │                               │
+│   │  AWS SDK       │                               │
+│   │  (S3 Access)   │                               │
+│   │                │                               │
+│   └────────────────┘                               │
+│                                                     │
+└────────────────────────────────────────────────────┘
+</code></pre>
+<h3>Instance Setup</h3>
+<p>The SETUP.MD file provides detailed instructions for setting up an EC2 instance:</p>
+<ol>
+<li>
+<p><strong>Instance Selection</strong>:</p>
+<ul>
+<li>Ubuntu 24.04 AMI</li>
+<li>Appropriate instance type based on workload (t3.medium, t3a.xlarge, etc.)</li>
+<li>Security groups configured for necessary access</li>
+</ul>
+</li>
+<li>
+<p><strong>Docker Installation</strong>:</p>
+<pre><code class="language-bash">sudo apt-get install -y ca-certificates curl gnupg
+sudo mkdir -p /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+# Additional docker installation steps...
+</code></pre>
+</li>
+<li>
+<p><strong>Code Deployment</strong>:</p>
+<pre><code class="language-bash">git clone https://github.com/&lt;your-username&gt;/&lt;your-repo&gt;.git
+cd &lt;your-repo&gt;
+git config credential.helper store
+git pull
+</code></pre>
+</li>
+</ol>
+<h3>AWS Credentials Configuration</h3>
+<p>AWS credentials are configured in the EC2 instance to enable access to S3:</p>
+<pre><code>~/.aws/credentials
+</code></pre>
+<p>Or as environment variables:</p>
+<pre><code>AWS_ACCESS_KEY_ID
+AWS_SECRET_ACCESS_KEY
+</code></pre>
+<p>These credentials should be created with the principle of least privilege, with access limited to the necessary S3 buckets.</p>
+<h2>IAM Roles and Permissions</h2>
+<h3>Required Permissions</h3>
+<p>The AWS credentials used by the system require the following permissions:</p>
+<ol>
+<li>
+<p><strong>S3 Permissions</strong>:</p>
+<ul>
+<li><code>s3:ListBucket</code>: To list objects in the bucket</li>
+<li><code>s3:GetObject</code>: To download objects from the bucket</li>
+<li><code>s3:PutObject</code>: To upload objects to the bucket</li>
+</ul>
+</li>
+<li>
+<p><strong>EC2 Permissions</strong> (if using EC2 instance profile):</p>
+<ul>
+<li>Permissions to access the required S3 buckets</li>
+</ul>
+</li>
+</ol>
+<h3>IAM Policy Example</h3>
+<p>A sample IAM policy for the Octo system:</p>
+<pre><code class="language-json">{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [
+    {
+      &quot;Effect&quot;: &quot;Allow&quot;,
+      &quot;Action&quot;: [
+        &quot;s3:ListBucket&quot;
+      ],
+      &quot;Resource&quot;: [
+        &quot;arn:aws:s3:::${bucket-name}&quot;
+      ]
+    },
+    {
+      &quot;Effect&quot;: &quot;Allow&quot;,
+      &quot;Action&quot;: [
+        &quot;s3:GetObject&quot;,
+        &quot;s3:PutObject&quot;
+      ],
+      &quot;Resource&quot;: [
+        &quot;arn:aws:s3:::${bucket-name}/data/*&quot;
+      ]
+    }
+  ]
+}
+</code></pre>
+<h2>S3 Bucket Configuration</h2>
+<h3>Bucket Creation</h3>
+<p>S3 buckets should be created with appropriate settings:</p>
+<ol>
+<li><strong>Region</strong>: Select a region close to the EC2 instance for optimal performance</li>
+<li><strong>Access Control</strong>: Enable appropriate access controls</li>
+<li><strong>Versioning</strong>: Consider enabling versioning for data integrity</li>
+<li><strong>Encryption</strong>: Enable server-side encryption</li>
+<li><strong>Lifecycle Rules</strong>: Configure lifecycle rules for cost optimization</li>
+</ol>
+<h3>Security Best Practices</h3>
+<p>Follow these best practices for S3 security:</p>
+<ol>
+<li><strong>Block Public Access</strong>: Ensure all public access is blocked</li>
+<li><strong>Encryption</strong>: Use server-side encryption for all objects</li>
+<li><strong>Access Logging</strong>: Enable access logging to track bucket access</li>
+<li><strong>Bucket Policies</strong>: Implement restrictive bucket policies</li>
+<li><strong>IAM Policies</strong>: Use principle of least privilege for IAM roles</li>
+</ol>
+<h2>Troubleshooting AWS Integration</h2>
+<h3>Common S3 Issues</h3>
+<ol>
+<li>
+<p><strong>Authentication Errors</strong>:</p>
+<ul>
+<li>Check that AWS credentials are correctly configured</li>
+<li>Verify that the IAM role has appropriate permissions</li>
+</ul>
+</li>
+<li>
+<p><strong>Upload Failures</strong>:</p>
+<ul>
+<li>Ensure the bucket exists and is accessible</li>
+<li>Check that the file exists locally before upload</li>
+<li>Verify that the IAM role has s3:PutObject permission</li>
+</ul>
+</li>
+<li>
+<p><strong>Bucket Listing Errors</strong>:</p>
+<ul>
+<li>Verify that the IAM role has s3:ListBucket permission</li>
+<li>Check that the bucket name is correct</li>
+</ul>
+</li>
+</ol>
+<h3>Logging and Debugging</h3>
+<p>The system includes error handling for AWS operations:</p>
+<pre><code class="language-python">try:
+  s3_client.upload_file(file_path, bucket, object_name)
+  return True
+except Exception as e:
+  print(f&quot;Error uploading to S3: {e}&quot;)
+  return False
+</code></pre>
+<p>Enhanced logging can be implemented for better troubleshooting:</p>
+<pre><code class="language-python">import logging
+
+logger = logging.getLogger(__name__)
+
+try:
+  logger.info(f&quot;Uploading {file_path} to {bucket}/{object_name}&quot;)
+  s3_client.upload_file(file_path, bucket, object_name)
+  logger.info(f&quot;Successfully uploaded {file_path}&quot;)
+  return True
+except Exception as e:
+  logger.error(f&quot;Error uploading to S3: {e}&quot;, exc_info=True)
+  return False
+</code></pre>
+<h2>Future AWS Integration Enhancements</h2>
+<p>Consider these enhancements to improve the AWS integration:</p>
+<ol>
+<li>
+<p><strong>CloudWatch Integration</strong>:</p>
+<ul>
+<li>Send logs to CloudWatch for centralized logging</li>
+<li>Create CloudWatch alarms for error monitoring</li>
+</ul>
+</li>
+<li>
+<p><strong>SQS Integration</strong>:</p>
+<ul>
+<li>Use SQS for job queuing and distribution</li>
+<li>Implement a more robust job system with retries</li>
+</ul>
+</li>
+<li>
+<p><strong>Lambda Integration</strong>:</p>
+<ul>
+<li>Trigger processing based on S3 events</li>
+<li>Implement serverless components for certain tasks</li>
+</ul>
+</li>
+<li>
+<p><strong>RDS Integration</strong>:</p>
+<ul>
+<li>Store job history and metadata in RDS</li>
+<li>Implement more robust job tracking</li>
+</ul>
+</li>
+</ol>
+<h2>Conclusion</h2>
+<p>The AWS integration in the Octo system primarily focuses on S3 for file storage and EC2 for deployment. The system uses the AWS SDK for Python (Boto3) to interact with S3, implementing a structured approach to file organization and tracking.</p>
+<p>Developers working with the system should understand the AWS integration to effectively maintain and extend the system's capabilities while following AWS best practices for security and performance.</p>
+</div><div class="page-break"></div><div id="section-8" class="section"><h1>Error Handling</h1>
+<h2>Introduction</h2>
+<p>Robust error handling is essential for ensuring the reliability and stability of the Octo system. This document outlines the error handling strategies implemented throughout the system, from API request validation to file processing errors.</p>
+<h2>Error Handling Strategies</h2>
+<p>The Octo system implements multiple levels of error handling to ensure:</p>
+<ol>
+<li><strong>Graceful Failure</strong>: The system fails gracefully when errors occur, preventing cascading failures</li>
+<li><strong>Detailed Logging</strong>: Errors are logged with sufficient detail for troubleshooting</li>
+<li><strong>Resource Cleanup</strong>: Resources are properly cleaned up in error scenarios</li>
+<li><strong>Progress Tracking</strong>: Job progress is accurately reported, even when errors occur</li>
+</ol>
+<h2>API-Level Error Handling</h2>
+<h3>Authentication Errors</h3>
+<p>The API uses FastAPI's dependency injection to handle authentication errors:</p>
+<pre><code class="language-python">def api_key_auth(api_key: str = Depends(oauth2_scheme)):
+    if api_key not in api_keys:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=&quot;Forbidden&quot;
+        )
+</code></pre>
+<p>When authentication fails, the API returns a standardized 401 Unauthorized response.</p>
+<h3>Request Validation</h3>
+<p>FastAPI automatically validates request bodies using Pydantic models:</p>
+<pre><code class="language-python">class RootBody(BaseModel):
+  provider: str = 'affirm'
+</code></pre>
+<p>Invalid requests result in detailed validation error responses:</p>
+<pre><code class="language-json">{
+  &quot;detail&quot;: [
+    {
+      &quot;loc&quot;: [&quot;body&quot;, &quot;provider&quot;],
+      &quot;msg&quot;: &quot;field required&quot;,
+      &quot;type&quot;: &quot;value_error.missing&quot;
+    }
+  ]
+}
+</code></pre>
+<h3>Duplicate Job Prevention</h3>
+<p>The API prevents duplicate jobs for the same provider:</p>
+<pre><code class="language-python">existing_jobs = [job for job in jobs.values() if job.provider == body.provider]
+if existing_jobs:
+    return {&quot;message&quot;: &quot;A job with the same provider is already in progress&quot;}
+</code></pre>
+<p>This prevents race conditions and resource conflicts.</p>
+<h2>Background Task Error Handling</h2>
+<p>The background task system includes error handling to prevent unhandled exceptions from crashing the server:</p>
+<pre><code class="language-python">async def start_new_task(uid: UUID, param: int, provider: str) -&gt; None:
+    try:
+        queue = asyncio.Queue()
+        task = asyncio.create_task(start_logic(queue, provider))
+        while progress := await queue.get():  # monitor task progress
+            jobs[uid].progress = progress
+
+        jobs[uid].status = &quot;complete&quot;
+        await asyncio.sleep(1)
+        jobs.pop(uid)
+    except Exception as e:
+        print(f&quot;Background task error: {e}&quot;)
+        jobs[uid].status = &quot;error&quot;
+        jobs[uid].result = str(e)
+</code></pre>
+<p>This ensures that:</p>
+<ol>
+<li>Exceptions in background tasks are caught and logged</li>
+<li>The job status is updated to reflect the error</li>
+<li>The error message is captured for later reference</li>
+</ol>
+<h2>Main Logic Error Handling</h2>
+<p>The main logic function includes comprehensive error handling:</p>
+<pre><code class="language-python">async def start_logic(queue: asyncio.Queue, provider_str: str):
+  try:
+    # Main logic implementation
+
+    # ...
+
+  except Exception as e:
+    print(f&quot;an error occurred: {e}&quot;)
+    await queue.put(None)
+    return
+</code></pre>
+<p>This top-level try/except block ensures that any unhandled exceptions in the main logic are caught, logged, and reported back to the background task via the queue.</p>
+<h2>File Processing Error Handling</h2>
+<p>The file processing loop includes error handling for individual files:</p>
+<pre><code class="language-python">for file_path in pending_files:
+  try:
+    if file_path.endswith('.sig'):
+      continue
+    # File processing steps
+    # ...
+  except Exception as e:
+    count += 1
+    delete_file(file_path)
+    percentage = (count/total_pending) * 100
+    await queue.put(float(&quot;{:.2f}&quot;.format(percentage)))
+    files_with_error.append(file_path)
+    print(f&quot;an error occurred while processing file {file_path}: {e}&quot;)
+    print(f&quot;{bcolors.UNDERLINE}--------------------------------------------{bcolors.ENDC}&quot;)
+    continue
+</code></pre>
+<p>This approach:</p>
+<ol>
+<li>Catches and logs errors for individual files</li>
+<li>Continues processing other files despite errors</li>
+<li>Maintains accurate progress reporting</li>
+<li>Tracks files with errors for later reporting</li>
+</ol>
+<h2>Provider-Specific Error Handling</h2>
+<p>Provider implementations include error handling for their specific operations:</p>
+<pre><code class="language-python">async def sftp_download(self, file_path: str):
+  try:
+    sftp_client = paramiko.SFTPClient.from_transport(self.ssh_client.get_transport())
+    print(f&quot;Downloading {file_path}&quot;)
+    sftp_client.get(f&quot;inbox/{file_path}&quot;, file_path)
+    sftp_client.close()
+  except Exception as e:
+    print(f&quot;Error downloading file {file_path}: {e}&quot;)
+    raise  # Re-raise to be caught by the main processing loop
+</code></pre>
+<p>This allows for:</p>
+<ol>
+<li>Provider-specific error logging</li>
+<li>Proper resource cleanup</li>
+<li>Error propagation to the main processing loop</li>
+</ol>
+<h2>Resource Cleanup in Error Scenarios</h2>
+<p>The system ensures proper resource cleanup even in error scenarios:</p>
+<pre><code class="language-python">try:
+  # Operation that could fail
+finally:
+  # Cleanup code that always runs
+  delete_file(file_path)
+  sftp_client.close()
+</code></pre>
+<p>Key resources that are cleaned up include:</p>
+<ol>
+<li>Temporary files</li>
+<li>Network connections (SSH/SFTP)</li>
+<li>File handles</li>
+</ol>
+<h2>Error Reporting and Visualization</h2>
+<p>Errors are reported in several ways:</p>
+<ol>
+<li>
+<p><strong>Console Logging</strong>:</p>
+<pre><code class="language-python">print(f&quot;{bcolors.FAIL}Files with errors: {files_with_error}{bcolors.ENDC}&quot;)
+</code></pre>
+</li>
+<li>
+<p><strong>Job Status Updates</strong>:</p>
+<pre><code class="language-python">jobs[uid].status = &quot;error&quot;
+jobs[uid].result = str(e)
+</code></pre>
+</li>
+<li>
+<p><strong>API Responses</strong>:</p>
+<pre><code class="language-python">{
+  &quot;uid&quot;: &quot;123e4567-e89b-12d3-a456-426614174000&quot;,
+  &quot;status&quot;: &quot;error&quot;,
+  &quot;progress&quot;: 75,
+  &quot;result&quot;: &quot;Error downloading file file.txt: Connection refused&quot;,
+  &quot;provider&quot;: &quot;affirm&quot;
+}
+</code></pre>
+</li>
+</ol>
+<h2>Error Types and Handling Strategies</h2>
+<h3>Network Errors</h3>
+<p>Network errors (connection failures, timeouts) are handled by:</p>
+<ol>
+<li>Retrying operations (not currently implemented, but a recommended enhancement)</li>
+<li>Logging detailed error information</li>
+<li>Continuing with other files when possible</li>
+</ol>
+<h3>File Format Errors</h3>
+<p>Errors in file formats (encryption, compression) are handled by:</p>
+<ol>
+<li>Validating file extensions before processing</li>
+<li>Providing detailed error messages for troubleshooting</li>
+<li>Skipping problematic files and continuing with others</li>
+</ol>
+<h3>Authentication Errors</h3>
+<p>Authentication errors (invalid credentials, expired keys) are handled by:</p>
+<ol>
+<li>Immediate failure with clear error messages</li>
+<li>Secure logging that doesn't expose sensitive information</li>
+</ol>
+<h3>AWS S3 Errors</h3>
+<p>S3 interaction errors are handled by:</p>
+<ol>
+<li>Exception handling around all S3 operations</li>
+<li>Detailed error logging</li>
+<li>Preventing partial uploads through proper error handling</li>
+</ol>
+<h2>Logging Best Practices</h2>
+<p>The system implements several logging best practices:</p>
+<ol>
+<li>
+<p><strong>Error Context</strong>: Logging includes the context of the error:</p>
+<pre><code class="language-python">print(f&quot;an error occurred while processing file {file_path}: {e}&quot;)
+</code></pre>
+</li>
+<li>
+<p><strong>Visual Differentiation</strong>: Using color coding for different types of messages:</p>
+<pre><code class="language-python">print(f&quot;{bcolors.FAIL}Files with errors: {files_with_error}{bcolors.ENDC}&quot;)
+print(f&quot;{bcolors.OKGREEN}No files with errors{bcolors.ENDC}&quot;)
+</code></pre>
+</li>
+<li>
+<p><strong>Performance Metrics</strong>: Logging includes timing information:</p>
+<pre><code class="language-python">print(f&quot;{bcolors.WARNING}processed finished in {&quot;{:10.2f}&quot;.format(elapsed_time)} seconds {bcolors.ENDC}&quot;)
+</code></pre>
+</li>
+</ol>
+<h2>Recommended Error Handling Enhancements</h2>
+<p>The current error handling system could be enhanced in several ways:</p>
+<ol>
+<li>
+<p><strong>Structured Logging</strong>:</p>
+<ul>
+<li>Implement a proper logging framework (e.g., Python's logging module)</li>
+<li>Use structured logging formats (JSON) for better analysis</li>
+</ul>
+</li>
+<li>
+<p><strong>Retry Mechanism</strong>:</p>
+<ul>
+<li>Implement automatic retries for transient errors</li>
+<li>Use exponential backoff for network operations</li>
+</ul>
+</li>
+<li>
+<p><strong>Error Aggregation</strong>:</p>
+<ul>
+<li>Implement a system to aggregate similar errors</li>
+<li>Provide summary reports of error patterns</li>
+</ul>
+</li>
+<li>
+<p><strong>Detailed Job Error States</strong>:</p>
+<ul>
+<li>Expand job status beyond &quot;in_progress&quot;, &quot;complete&quot;, and &quot;error&quot;</li>
+<li>Track specific error states (e.g., &quot;authentication_error&quot;, &quot;network_error&quot;)</li>
+</ul>
+</li>
+<li>
+<p><strong>Error Notifications</strong>:</p>
+<ul>
+<li>Implement alerts for critical errors</li>
+<li>Add email or webhook notifications for operational issues</li>
+</ul>
+</li>
+</ol>
+<h2>Conclusion</h2>
+<p>The Octo system implements a robust error handling strategy that ensures reliability and stability. By catching and handling errors at multiple levels, properly cleaning up resources, and providing detailed error information, the system maintains operational integrity even when issues occur.</p>
+<p>Developers working on the system should follow the established error handling patterns, ensuring that new code maintains the same level of robustness and detailed error reporting.</p>
+</div>
+  </div>
+</body>
+</html>
